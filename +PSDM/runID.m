@@ -22,7 +22,7 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
     %        against gravity. Default: [0;0;1] (z axis points upwards from
     %        gravity).
     %   - tol: A tolerance used in the ID. Any factors below this tolerance
-    %          (in estimation of the torques) is ignored. Defaut: 1e-12.
+    %          (in estimation of the torques) is ignored. Defaut: 1e-11.
     %   - v: A verbosity flag. Set to false to suppress output. Default:
     %           true.
     %
@@ -35,7 +35,7 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
     
     % Fill in inputs
     if nargin < 4 || isempty(tol)
-        tol = 1e-12;
+        tol = 1e-11;
     end
     if nargin < 5 || isempty(v)
         v = true;

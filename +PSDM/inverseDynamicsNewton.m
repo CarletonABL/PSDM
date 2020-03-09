@@ -141,7 +141,7 @@ function [tauOut, ftOut, extraOut] = ...
     if coder.target('matlab')
         try
             [tauOut, ftOut, extraOut] = ...
-                RU.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
+                PSDM.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
             return;
         catch
             warning("Could not run mex file! Likely need to compile RU toolbox with RU.make.");

@@ -12,10 +12,10 @@ function C = blockprod(A_in, B_in)
     % Else, try to use mex, catch otherwise
     if coder.target('matlab')
         try
-            C = utils.blockprod_mex(A_in, B_in);
+            C = utilities.blockprod_mex(A_in, B_in);
             return;
         catch
-            warning("Utils not compiled. You should run utils.make!");
+            warning("utilities not compiled. You should run utilities.make!");
         end
     end
     

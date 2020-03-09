@@ -1,8 +1,10 @@
-function genHardcodedInverseDynamics(filename, E, P, Theta, doMex)
+function makeInverseDynamics(filename, E, P, Theta, varargin)
 
-    if nargin < 5 || isempty(doMex)
-        doMex = false;
-    end
+    p = inputParser;
+    p.addOptional('do_mex', false);
+    p.addOptional('parallel', false);
+    p.parse(varargin{:});
+    opt = p.Results;
 
     DOF = size(P, 3);
     
@@ -110,6 +112,11 @@ function genHardcodedInverseDynamics(filename, E, P, Theta, doMex)
         sprintf('function tau = %s(Q, Qd, Qdd)', funcName));
     funcText = strrep(funcText, '%p%', ...
         sprintf('%d', size(E,2)));
+    
+    if opt.parallel
+        % Change loop to a parallel loop
+        funcText = strrep(funcText, "for i = 1:N", "parfor i = 1:N");
+    end
         
     
     %% Write file
@@ -120,7 +127,7 @@ function genHardcodedInverseDynamics(filename, E, P, Theta, doMex)
     
     %% Mex, if desired
     
-    if doMex
+    if opt.do_mex
         
         fprintf("Compiling into mex file... ");
 
@@ -142,9 +149,10 @@ function genHardcodedInverseDynamics(filename, E, P, Theta, doMex)
         cdir = pwd;
         idir = fullfile(dir, '..');
         compileName = fullfile(funcDir, funcName);
-        
-        codegen(compileName,'-config', cfg, '-I', idir, '-args', ARGS{1})
+        cd(funcDir)
+        codegen(compileName,'-config', cfg, '-args', ARGS{1})
         fprintf(" Done!\n");
+        cd(cdir);
         
     end
     

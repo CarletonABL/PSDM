@@ -37,10 +37,10 @@ end
 
 if coder.target('matlab')
     try
-        A_out = utils.rref_mex(A, tol, compact);
+        A_out = utilities.rref_mex(A, tol, compact);
         return; 
     catch
-        warning("utils is not compiled! This code will run very slowly without compilation. Recommend running utils.make");
+        warning("utilities is not compiled! This code will run very slowly without compilation. Recommend running utilities.make");
     end
 end
 
