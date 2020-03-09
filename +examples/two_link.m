@@ -64,7 +64,10 @@ t1 = toc(tic1);
 
 fprintf("Default function took %.3g seconds per state.\n", t1/N);
 
-% Generate dedicated function
+%% Generate dedicated function
+
+% Make temporary director
+
 addpath(fullfile(utilities.PSDMDir, 'temp'));
 filename = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_twolink.m');
 doMex = true; % Whether or not to mex result for speed

@@ -16,12 +16,13 @@ codegen/
 *bak/
 **/bak/
 parfor_progress.txt
-**/temp/
-/temp
+/temp/*
 scripts/
 *.autosave
 *.asv
 save_data/*
+
+!temp/README*
 
 # Ignore simulink real time folders
 *_maci64/
