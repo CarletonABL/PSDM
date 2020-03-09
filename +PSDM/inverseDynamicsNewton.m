@@ -1,4 +1,4 @@
-function [tauTAll, fTAll, extraAll] = ...
+function [tauOut, ftOut, extraOut] = ...
     inverseDynamicsNewton(DH_ext, Xlist, Q, Qd, Qdd, outputFrame, g, Rbase)
     % INVERSEDYNAMICSNEWTON Computes the reaction torques and forces in
     % each joint due to a motion defined by Q (joint variables), Qd (joint
@@ -44,6 +44,8 @@ function [tauTAll, fTAll, extraAll] = ...
     %           angles!).
     %   - outputFrame [int8]: The ID of the frame you want to output the
     %          forces in.
+    %            * 2:  Forces are returned as generalized torque/forces in
+    %                  a DOF x N matrix.
     %            * 1:  Forces in the joint are resolved in the frame of the
     %                  following link (i+1) [default].
     %            * 0:  Forces in joint are resolved in the previous frame. This
@@ -52,7 +54,7 @@ function [tauTAll, fTAll, extraAll] = ...
     %           * -1: Forces are resolved in the world frame.
     %   - g:  A 3x1 vector unit vector indicating the direction of the
     %         gravity. Will be scaled by the value of gravity returned
-    %         by utils.g.
+    %         by utilities.g.
     %         If this vector is set to identically [0 0 0], then gravity
     %         will be ignored.
     %         Default: [0 0 1].
@@ -68,17 +70,6 @@ function [tauTAll, fTAll, extraAll] = ...
     %     acceleration, and linear acceleration of the ends of links and
     %     center of gravities. All quantities are in standard units
     %     (rad/s^2, rad/s, m/s^2). All dimensions are [3 x DOF].
-    %
-    % NOTE! Currently, this script only works on revolute joint robots.
-    % Also todo, add easy way to add Fext to the computation (since you get
-    % it essentially free). Should also add functionality to simultanioulsy
-    % compute multiple joints at once (not done yet).
-    %
-    % Code has been tested on revolute joint robots only, through
-    % comparison with Simulink multibody and with the Lagrangian
-    % closed-form equations.
-    %
-    % See also: SerialManipulator.inverseDynamicsNewton.
 
     %% Parse arguments
 
@@ -101,10 +92,6 @@ function [tauTAll, fTAll, extraAll] = ...
     else
         qsign = ones(DOF, 1);
     end
-
-    assert(all(lt == 0), ...
-        ['This script currently only works for revolute joint robots ', ...
-         'only. Feel free to extend it to the general case!']);
     
     % Parse Xlist
     assert( (size(Xlist, 1) == DOF || size(Xlist, 1) == DOF+1) && size(Xlist, 2) == 10, ...
@@ -120,20 +107,21 @@ function [tauTAll, fTAll, extraAll] = ...
 
     m = Xrobot(:, 1)';
     rc = Xrobot(:, 2:4)';
-    I = SerialManipulator.inertiaTensor(Xrobot(:, 5:10));
+    I = inertiaTensor(Xrobot(:, 5:10));
 
     % If Xtool is non-zero, then combine its inertia with that of the last
     % link, then proceed normally.
     if any(abs(Xtool) > eps)
-        Xend = RU.combineBodyInertias(Xrobot(DOF, :), Xtool);
+        Xend = PSDM.combineBodyInertias(Xrobot(DOF, :), Xtool);
         m(end) = Xend(1);
         rc(:, end) = Xend(1, 2:4)';
-        I(:, :, end) = SerialManipulator.inertiaTensor(Xend(1, 5:10));
+        I(:, :, end) = inertiaTensor(Xend(1, 5:10));
     end
 
     % Check Q vectors
     assert( all(size(Q) == size(Qd)) && all(size(Q) == size(Qdd)), ...
         "Joint variables sizes must match!");
+    assert( size(Q, 1) == DOF, "Joint variables must be a DOF x N matrix!");
 
     % Parse outputFrame
     if nargin < 6 || isempty(outputFrame)
@@ -142,7 +130,7 @@ function [tauTAll, fTAll, extraAll] = ...
 
     % Parse g and Rbase
     if nargin < 7 || isempty(g)
-        g = [0 0 1];
+        g = [0 0 1]';
     end
     if nargin < 8 || isempty(Rbase)
         Rbase = eye(3);
@@ -152,7 +140,7 @@ function [tauTAll, fTAll, extraAll] = ...
     %% Check if MEX exists, if so, run that
     if coder.target('matlab')
         try
-            [tauTAll, fTAll, extraAll] = ...
+            [tauOut, ftOut, extraOut] = ...
                 RU.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
             return;
         catch
@@ -168,16 +156,16 @@ function [tauTAll, fTAll, extraAll] = ...
     props.DH = DH;
     props.rc = rc;
     props.m = m;
-    props.g = -g * utils.g;
+    props.g = -g * utilities.g;
     props.I = I;
     props.lt = lt; % logical zero if revolute, logical 1 if prismatic
     props.qsign =qsign;
     props.Rbase = Rbase;   
     
     % Pre-init variables
-    tauTAll = zeros(3, DOF, N);
-    fTAll = zeros(3, DOF, N);
-    extraAll = repmat(struct('alpha', nan(3, DOF), ...
+    tau = zeros(3, DOF, N);
+    ft = zeros(3, DOF, N);
+    extra = repmat(struct('alpha', nan(3, DOF), ...
                               'w', nan(3, DOF), ...
                               'ae', nan(3, DOF), ...
                               'ac', nan(3, DOF)), ...
@@ -196,7 +184,7 @@ function [tauTAll, fTAll, extraAll] = ...
      
         % Parfor loop
         parfor j = 1:N
-            [tauTAll(:, :, j), fTAll(:, :, j), extraAll(j)] = ...
+            [tau(:, :, j), ft(:, :, j), extra(j)] = ...
                 mainNELoop(props, Q(:, j), Qd(:, j), Qdd(:, j), outputFrame);
         end 
         
@@ -204,12 +192,26 @@ function [tauTAll, fTAll, extraAll] = ...
         
         % Regular for loop
         for j = 1:N
-            [tauTAll(:, :, j), fTAll(:, :, j), extraAll(j)] = ...
+            [tau(:, :, j), ft(:, :, j), extra(j)] = ...
                 mainNELoop(props, Q(:, j), Qd(:, j), Qdd(:, j), outputFrame);
         end
         
     end
-        
+    
+    % If user has requested outputFrame 2, need to re-arrange some things
+    if outputFrame == int8(2)
+        tauOut = zeros(DOF, N);
+        ftOut = [];
+        if nargout > 2
+            extraOut = extra;
+        end
+        tauOut(lt, :) = ft(3, lt, :);
+        tauOut(~lt, :) = tau(3, ~lt, :);
+    else
+        tauOut = tau;
+        ftOut = ft;
+        extraOut = extra;
+    end
     
 end
 
@@ -234,6 +236,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
     ac = zeros(3, DOF+1);
     ae = zeros(3, DOF+1);
 
+    % To add force to joints, just set the wrench to the last columns of
+    % these two variables
     f = zeros(3, DOF+1);
     tau = zeros(3, DOF+1);
 
@@ -262,6 +266,10 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         % Naming convension: XX_i   -> XX of frame i
         %                    XX_im1 -> XX of frame i - 1
         %                    XX_ip1 -> XX of frame i + 1
+        % w => angular speed
+        % alpha => angular acceleration
+        % ae => acceleration, end of link
+        % ac => acceleration, center of mass of link
 
         w_im1 = w(:, i);
         alpha_im1 = alpha(:, i);
@@ -280,7 +288,7 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         z_im1 = R_im1(:, 3);
 
         % Vector from o_i to o_i+1
-        r_i_ip1 = utils.rotx(DH(i, 2))'*[DH(i, 1); 0; DH(i, 3)];
+        r_i_ip1 = rot(DH(i, 2), 1)'*[DH(i, 1); 0; DH(i, 3)];
 
         % Vector from o_i to o_ci
         r_i_ci = r_i_ip1 + props.rc(:, i);
@@ -289,7 +297,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         b_i = Ri' * z_im1; 
 
         % Spong, 2nd edition, p278, eq. 7.149
-        w_i = Rdiff_i' * w_im1 + is_rev * b_i*Qd(i);
+        w_i = Rdiff_i' * w_im1 ...
+            + is_rev * b_i*Qd(i);
 
         % Spong, 2nd edition, p278, eq. 7.153
         alpha_i = Rdiff_i'*alpha_im1 + ...
@@ -297,16 +306,24 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
             is_rev * cross( w_i, b_i*Qd(i) );
 
         % Spong, 2nd edition, p279, eq. 7.159
-        % This equation needs to be updated to allow for prismatic joints
+        % Has been updated to allow for prismatic joints, according to
+        % http://www-robotics.cs.umass.edu/~grupen/603/slides/DynamicsII.pdf
+        % Page 16.
         ae_i = Rdiff_i' * ae_im1 + ...
             cross( alpha_i, r_i_ip1 ) + ...
-            cross( w_i, cross(w_i, r_i_ip1) );
+            cross( w_i, cross(w_i, r_i_ip1) ) ...
+            + is_pris * b_i * Qdd(i) ...
+            + is_pris * 2 * cross( w_i, b_i * Qd(i) );
 
         % Spong, 2nd edition, p279, eq. 7.158
-        % This equation needs to be updated to allow for prismatic joints
+        % Has been updated to allow for prismatic joints, according to
+        % http://www-robotics.cs.umass.edu/~grupen/603/slides/DynamicsII.pdf
+        % Page 16.
         ac_i = Rdiff_i' * ae_im1 + ...
             cross( alpha_i, r_i_ci ) + ...
-            cross( w_i, cross(w_i, r_i_ci) );
+            cross( w_i, cross(w_i, r_i_ci) ) ...
+            + is_pris * b_i * Qdd(i) ...
+            + is_pris * 2 * cross( w_i, b_i * Qd(i) );
 
         % Store values in arrays
         w(:, i+1) = w_i;
@@ -379,7 +396,7 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
             tauT(:, :) = tau(:, 1:DOF);
             return;
             
-        case int8(0)
+        case {int8(0), int8(2)}
             % Need to rewrite it backwards one frame
             Radj = Rdiff;
 
@@ -403,7 +420,6 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         extra.w(:, i) = Radj(:, :, i) * w(:, i);
         extra.ae(:, i) = Radj(:, :, i) * ae(:, i);
         extra.ac(:, i) = Radj(:, :, i) * ac(:, i);
-
     end
     
 end
@@ -419,5 +435,59 @@ function R = makeDHRot(theta, alpha)
     R = [ct, -st*ca, st*sa;
          st, ct*ca, -ct*sa;
          0, sa, ca];
+     
+end
+
+function R = rot(angle, axis)
+    % ROT Generates a rotation matrix along a principle coordinate.
+    % Angle is in radians. Axis is 1 for x, 2 for y, 3 for z.
+    %
+    % R = rot(theta, axis) returns the 3x3 rotation matrix for a
+    % theta radian rotation about axis.
+    
+    c = permute(cos(angle(:)), [2 3 1]);
+    s = permute(sin(angle(:)), [2 3 1]);
+    N = numel(s);
+    z = zeros(1,1,N);
+    o = ones(1,1,N);
+
+    switch axis
+        case 1
+            R = [o z z;
+                 z c -s;
+                 z s c];
+        case 2
+            R = [c z s;
+                 z o z;
+                 -s z c];
+        case 3
+            R = [c -s z;
+                 s c z;
+                 z z o];
+        otherwise
+            error("Axis must be 1-3 (for x, y and z)");
+    end
+    
+end
+
+function I = inertiaTensor(Ilist_in)
+    % INERTIATENSOR Returns the inertia tensor from a list of inertia
+
+    if ~ isa(Ilist_in, 'double')
+        Ilist = Ilist_in.s_Ilist;
+    else
+        Ilist = Ilist_in;
+    end
+
+    Ixx = permute( Ilist(:, 1), [3 2 1]);
+    Iyy = permute( Ilist(:, 2), [3 2 1]);
+    Izz = permute( Ilist(:, 3), [3 2 1]);
+    Ixy = permute( Ilist(:, 4), [3 2 1]);
+    Ixz = permute( Ilist(:, 5), [3 2 1]);
+    Iyz = permute( Ilist(:, 6), [3 2 1]);
+    
+    I = [Ixx Ixy Ixz;
+         Ixy Iyy Iyz;
+         Ixz Iyz Izz];
      
 end

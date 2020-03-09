@@ -43,7 +43,7 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
     Nterms_test = Nterms / (DOF + nchoosek(DOF, 2));
     
     % Print, if required
-    utils.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
+    utilities.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
     
     % Initialize some terms
     velTerms = E1((2*DOF+1):(3*DOF), :);
@@ -73,7 +73,7 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
         
         Ejoint = E1(:,maskCombined);
         
-        utils.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
+        utilities.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
         
         maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'centripital', j}, tol, v);
         
@@ -84,7 +84,7 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
         
     end
     
-    utils.vprint(v, '\nRunning coriolis derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
+    utilities.vprint(v, '\nRunning coriolis derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
     
     % Loop through and ID
     for i = 1:size(jointCombinations, 1)
@@ -101,7 +101,7 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
         
         Ejoint = E1(:, maskCombined);
 
-        utils.vprint(v, '\tSearching in joints %d/%d (%d terms)...\n', int32(j(1)), int32(j(2)), int32(sum(maskCombined)));  
+        utilities.vprint(v, '\tSearching in joints %d/%d (%d terms)...\n', int32(j(1)), int32(j(2)), int32(sum(maskCombined)));  
         
         maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'coriolis', j}, tol, v);
         
@@ -113,9 +113,9 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
     end
     
     % Solve for masks
-    utils.vprint(v, "\tCombining terms:\n");
+    utilities.vprint(v, "\tCombining terms:\n");
     [E, P] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'velocity', tol, v);
 
-    utils.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(sum(mask)), toc(t));
+    utilities.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(sum(mask)), toc(t));
    
 end

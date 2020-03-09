@@ -75,7 +75,7 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
     [Evel, Pvel] = PSDM.runIDVel(DH_ext, X, Eaccel, tol, v);
 
     % Final combinations
-    utils.vprint(v, "Running final combining of terms:\n");
+    utilities.vprint(v, "Running final combining of terms:\n");
     
     % Do final combination of regression terms
     [E, P] = PSDM.combineTerms(DH_ext, X, g, ...
@@ -83,6 +83,6 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
         {Pgrav, Paccel, Pvel}, ...
         'all', tol, v);
     
-    utils.vprint(v, "\nRobot matching done. Took %.3g s total.\n", toc(t));
+    utilities.vprint(v, "\nRobot matching done. Took %.3g s total.\n", toc(t));
 
 end

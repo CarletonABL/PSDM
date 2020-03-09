@@ -126,9 +126,9 @@ function make(functions)
     
     %% forwardDynamics
     
-    if any(strcmp(functions, 'forwardDynamics')) || any(strcmp(functions, 'all'))
+    if any(strcmp(functions, 'inverseDynamics')) || any(strcmp(functions, 'all'))
     
-        fprintf("Compiling PSDM.forwardDynamics into mex file... ");
+        fprintf("Compiling PSDM.inverseDynamics into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
         cfg = coder.config('mex');
@@ -149,49 +149,18 @@ function make(functions)
         ARGS{1}{6} = coder.typeof(0,[10 Inf],[1 1]);
 
         cd(fullfile(path, '+PSDM'));
-        codegen -config cfg -I path +PSDM/forwardDynamics -args ARGS{1}
+        codegen -config cfg -I path +PSDM/inverseDynamics -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");
         
     end
-    
-    %% forwardDynamics
-    
-    if any(strcmp(functions, 'forwardDynamicsTest')) || any(strcmp(functions, 'all'))
-    
-        fprintf("Compiling PSDM.forwardDynamicsTest into mex file... ");
-
-        % Create configuration object of class 'coder.MexCodeConfig'.
-        cfg = coder.config('mex');
-        cfg.GenerateReport = true;
-        cfg.ReportPotentialDifferences = false;
-        cfg.IntegrityChecks = false;
-        cfg.ResponsivenessChecks = false;
-        cfg.ExtrinsicCalls = false;
-
-        % Define argument types for entry-point 'genTestPoses'.
-        ARGS = cell(1,1);
-        ARGS{1} = cell(5,1);
-        ARGS{1}{1} = coder.typeof(false,[60 10000],[1 1]);
-        ARGS{1}{2} = coder.typeof(0,[10000 10],[1 1]);
-        ARGS{1}{3} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]);
-
-        cd(fullfile(path, '+PSDM'));
-        codegen -config cfg -I path +PSDM/forwardDynamicsTest -args ARGS{1}
-
-        cd(path);
-        fprintf("Done!\n");
         
-    end
-    
     %% InverseDynamicsNewton
     
     if any(strcmp(functions, 'inverseDynamicsNewton')) || any(strcmp(functions, 'all'))
 
-        disp("Compiling inverseDynamicsNewton function into mex...");
+        disp("Compiling PSDM.inverseDynamicsNewton function into mex...");
 
         cfg = coder.config('mex');
         cfg.GenerateReport = true;
@@ -212,37 +181,6 @@ function make(functions)
         % Invoke MATLAB Coder.
         cd( fullfile( path, '+PSDM') );
         codegen -config cfg -I roboDir +PSDM/inverseDynamicsNewton -args ARGS{1}
-        cd( path );
-
-        disp("Done.");
-        
-    end
-    
-    %% InverseDynamicsNewtonTest
-    
-    if any(strcmp(functions, 'inverseDynamicsNewtonTest')) || any(strcmp(functions, 'all'))
-
-        disp("Compiling inverseDynamicsNewtonTest function into mex...");
-
-        cfg = coder.config('mex');
-        cfg.GenerateReport = true;
-        cfg.ReportPotentialDifferences = false;
-
-        % Define argument types for entry-point 'inverseDynamicsNewton'.
-        ARGS = cell(1,1);
-        ARGS{1} = cell(8,1);
-        ARGS{1}{1} = coder.typeof(0,[10  6],[1 1]);
-        ARGS{1}{2} = coder.typeof(0,[10 10],[1 0]);
-        ARGS{1}{3} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{6} = coder.typeof(int8(0));
-        ARGS{1}{7} = coder.typeof(0,[3 1]);
-        ARGS{1}{8} = coder.typeof(0,[3 3]);
-
-        % Invoke MATLAB Coder.
-        cd( fullfile( path, '+PSDM') );
-        codegen -config cfg -I roboDir +PSDM/inverseDynamicsNewtonTest -args ARGS{1}
         cd( path );
 
         disp("Done.");

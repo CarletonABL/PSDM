@@ -72,15 +72,15 @@ function [E, P] = runIDGravity(DH_ext, X, g, tol, v)
     E1 = PSDM.genSearchTerms(DOF, 'gravity');
     Nterms = size(E1, 2);
     
-    utils.vprint(v, '\nRunning gravity derivation (%d search terms).\n', int32(Nterms));
+    utilities.vprint(v, '\nRunning gravity derivation (%d search terms).\n', int32(Nterms));
 
     mask = PSDM.findCorrelationMask(DH_ext, X, g, E1, 'gravity', tol, v);
 
     E = E1(:, mask);
     
-    utils.vprint(v, "\n\tCombining terms:\n");
+    utilities.vprint(v, "\n\tCombining terms:\n");
     P = PSDM.findBaseParams(DH_ext, X, g, E, 'gravity', [], tol, v);
 
-    utils.vprint(v, '\tGravity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P, 2)), toc(time));
+    utilities.vprint(v, '\tGravity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P, 2)), toc(time));
     
 end

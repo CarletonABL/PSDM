@@ -11,10 +11,10 @@ function Theta = getTheta(DH_ext, X, g, E, P, Ntests)
     
     Yp = PSDM.genTermValues(Q, Qd, Qdd, E);
     
-    Yb = utils.blockprod(Yp, P);
+    Yb = utilities.blockprod(Yp, P);
     
-    Yb_stack = utils.vertStack(Yb);
-    tau_stack = utils.vertStack(tau, 2);
+    Yb_stack = utilities.vertStack(Yb);
+    tau_stack = utilities.vertStack(tau, 2);
     
     Theta = Yb_stack \ tau_stack;
     

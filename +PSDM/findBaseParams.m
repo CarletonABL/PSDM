@@ -48,13 +48,13 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
     
     % Make Y matrix
     Y = PSDM.genTermValues(Q, Qd, Qdd, E);
-    Yi = utils.blockprod(Y, P1);
+    Yi = utilities.blockprod(Y, P1);
     
     % Y tile is Y for each joint
     Ytile = tileArray(Yi, DOF);
     
     tau_stack = permute( ...
-                    utils.vertStack(tau, 2), ...
+                    utilities.vertStack(tau, 2), ...
                     [1 3 2]);
    
     % Solve
@@ -66,7 +66,7 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
     T(:, all(abs(T) < tol, 1)) = 0;
     
     % Reduce to minimum parameters    
-    P_stack_inv = utils.rref(T', [], true);
+    P_stack_inv = utilities.rref(T', [], true);
     
     b = size(P_stack_inv, 1);
     
@@ -81,7 +81,7 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
     Ymin = Ytile * P_stack;
     Tmin = P_stack_inv * T;
     
-    P = utils.blockprod(P1, P2);
+    P = utilities.blockprod(P1, P2);
 
     % Find reprojection error
     r = Ymin*Tmin - tau_stack;
@@ -95,7 +95,7 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
         end
     end
     
-    utils.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n\t\tReprojection error is %.3g\n", ...
+    utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n\t\tReprojection error is %.3g\n", ...
         int32(size(P1, 1)), int32(M), int32(b), toc(t), max(abs(r), [], 'all'));
         
 end

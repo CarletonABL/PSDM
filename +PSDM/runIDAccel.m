@@ -52,7 +52,7 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
     E1 = PSDM.genSearchTerms(DOF, 'accel');
     Nterms = size(E1, 2);
     
-    utils.vprint(v, '\nRunning accel derivation (%d search terms).\n\n', int32(Nterms));
+    utilities.vprint(v, '\nRunning accel derivation (%d search terms).\n\n', int32(Nterms));
     
     % Define some helpers
     accelTerms = E1((3*DOF+1):(4*DOF), :);
@@ -73,7 +73,7 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
         
         Ejoint = E1(:, maskCombined);
         
-        utils.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
+        utilities.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
         
         maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'accel', j}, tol, v);
         
@@ -87,9 +87,9 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
     end
     
     % Solve for masks
-    utils.vprint(v, "\tCombining terms:\n");
+    utilities.vprint(v, "\tCombining terms:\n");
     [E, P] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'accel', tol, v);
 
-    utils.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P, 2)), toc(t));
+    utilities.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P, 2)), toc(t));
     
 end
