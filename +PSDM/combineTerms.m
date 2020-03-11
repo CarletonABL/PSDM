@@ -29,7 +29,7 @@ function [E, P] = combineTerms(DH_ext, X, g, Ei, Pi, idType, tol, v)
     
     % Initialize a "combined" P and E matrix and populate it in a loop
     P_combined = zeros(n, m, DOF);
-    E = zeros(4*DOF, n, 'uint8');
+    E = zeros(5*DOF, n, 'uint8');
     n = 0; m = 0;
     for i = 1:N
         [ni,mi,~] = size(Pi{i});

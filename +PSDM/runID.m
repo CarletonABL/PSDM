@@ -45,7 +45,8 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
     end
     
     % Run mex, if possible
-    if coder.target('matlab') && ~no_mex
+    c = PSDM.config;
+    if coder.target('matlab') && ~no_mex && c.allow_mex
         try
             [E, P] = PSDM.runID_mex(DH_ext, X, g, tol, v);
             return; 
@@ -56,7 +57,6 @@ function [E, P] = runID(DH_ext, X, g, tol, v, no_mex)
         
     % Check inputs
     assert(size(DH_ext, 2) == 6, "Invalid DH table");
-    assert(all(DH_ext(:, 5) == 0), "This function does not currently work on prismatic joint robots");
     assert(all(abs(DH_ext(:, 6)) == 1), "Link sign column appears invalid. All numbers must be -1 or 1!");
     assert(size(X, 2) == 10 && size(X, 1) == size(DH_ext, 1), "X appears to be the wrong size!");
     assert(all(X(:, [1, 5, 6, 7]) >= 0, 'all'), "Negative masses and principle inertias Ixx Iyy Izz are not possible!")

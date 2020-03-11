@@ -8,7 +8,7 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
     if coder.target('matlab') && isa(Q, 'sym')
         
         % Calculate the values of the generator function
-        gamma = vertcat( sin(Q), cos(Q), Qd, Qdd );
+        gamma = vertcat( Q, sin(Q), cos(Q), Qd, Qdd );
         
         Yp = prod(gamma .^ sym(E), 1);
         return;
@@ -16,7 +16,8 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
     end
     
     % Run mex, if possible
-    if coder.target('matlab') && size(Q, 2) < 40000
+    c = PSDM.config;
+    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex
          try
             Yp = PSDM.genTermValues_mex(Q, Qd, Qdd, E);
             return; 
@@ -26,7 +27,6 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
     end
     
     % Otherwise, do function normally
-    
     DOF = size(Q, 1);
     
     % Permute joint angles into 3rd dimension
@@ -35,10 +35,12 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
     Qdd = permute(Qdd, [1 3 2]);
     
     % Calculate the values of the generator function
-    gamma = vertcat( sin(Q), cos(Q), Qd, Qdd );
+    gamma = vertcat( Q, sin(Q), cos(Q), Qd, Qdd );
     
-    Eexp = vertcat( E > 0, E( DOF+(1:DOF), : ) > 1, E(2*DOF+(1:DOF), : ) > 1 );
-    gamma_exp = vertcat(gamma, gamma( DOF+(1:DOF), 1, : ), gamma( 2*DOF + (1:DOF), 1, :) );
+    % Q, cos(Q) and Qd can be squared. Take these parts out to "optimize"
+    % the computation
+    Eexp = vertcat( E > 0, E( (1:DOF), : ) > 1, E( 2*DOF+(1:DOF), : ) > 1, E(3*DOF+(1:DOF), : ) > 1 );
+    gamma_exp = vertcat(gamma, gamma( (1:DOF), 1, : ), gamma( 2*DOF + (1:DOF), 1, : ), gamma( 3*DOF + (1:DOF), 1, :) );
 
     trimMask = any(Eexp, 2);
 

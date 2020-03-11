@@ -1,6 +1,6 @@
 function tau = inverseDynamics(Q, Qd, Qdd)
 
-g = horzcat( sin(Q)', cos(Q)');
+g = horzcat( Q', sin(Q)', cos(Q)');
 
 a = horzcat(Qd', Qdd');
 

@@ -1,4 +1,4 @@
-function [E, P] = runIDAccel(DH_ext, X, tol, v)
+function [Ep_acc, P_acc] = runIDAccel(DH_ext, X, tol, v)
     % RUNIDACCEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling), but only for the acceleration terms.
     %
@@ -40,7 +40,6 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
 
     % Check inputs
     assert(size(DH_ext, 2) == 6, "Invalid DH table");
-    assert(all(DH_ext(:, 5) == 0), "This function does not currently work on prismatic joint robots");
     assert(all(abs(DH_ext(:, 6)) == 1), "Link sign column appears invalid. All numbers must be -1 or 1!");
     assert(size(X, 2) == 10 && size(X, 1) == size(DH_ext, 1), "X appears to be the wrong size!");
     assert(all(X(:, [1, 5, 6, 7]) >= 0, 'all'), "Negative masses and principle inertias Ixx Iyy Izz are not possible!")
@@ -49,16 +48,16 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
     DOF = size(DH_ext, 1);
     
     % Get general term map
-    E1 = PSDM.genSearchTerms(DOF, 'accel');
-    Nterms = size(E1, 2);
+    Em_acc = PSDM.getSetYm(DH_ext, 'joint');
+    Nterms = size(Em_acc, 2);
     
     utilities.vprint(v, '\nRunning accel derivation (%d search terms).\n\n', int32(Nterms));
     
     % Define some helpers
-    accelTerms = E1((3*DOF+1):(4*DOF), :);
+    accelTerms = Em_acc((4*DOF+1):(5*DOF), :);
     
     % Preallocation some variables
-    mask = ones(1, size(E1, 2), 'logical');
+    mask = ones(1, size(Em_acc, 2), 'logical');
     Ei = cell(DOF, 1);
     Pi = cell(DOF, 1);
     
@@ -71,25 +70,25 @@ function [E, P] = runIDAccel(DH_ext, X, tol, v)
         % Combine with existing mast
         maskCombined = all([mask; jointMask], 1);
         
-        Ejoint = E1(:, maskCombined);
+        Em_joint = Em_acc(:, maskCombined);
         
         utilities.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
         
-        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'accel', j}, tol, v);
+        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Em_joint, {'accel', j}, tol, v);
         
         % Combine with running mask
         mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );    
         
         % Build up E matrix for each joint
-        Ei{j} = Ejoint(:, maskCorr);
-        Pi{j} = PSDM.findBaseParams(DH_ext, X, [], Ejoint(:, maskCorr), {'accel', j}, [], tol, v);
+        Ei{j} = Em_joint(:, maskCorr);
+        Pi{j} = PSDM.findBaseParams(DH_ext, X, [], Em_joint(:, maskCorr), {'accel', j}, [], tol, v);
         
     end
     
     % Solve for masks
     utilities.vprint(v, "\tCombining terms:\n");
-    [E, P] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'accel', tol, v);
+    [Ep_acc, P_acc] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'accel', tol, v);
 
-    utilities.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P, 2)), toc(t));
+    utilities.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P_acc, 2)), toc(t));
     
 end

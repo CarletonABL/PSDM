@@ -1,24 +1,28 @@
-function [tauOut, ftOut, extraOut] = ...
+function [wrench, extra] = ...
     inverseDynamicsNewton(DH_ext, Xlist, Q, Qd, Qdd, outputFrame, g, Rbase)
     % INVERSEDYNAMICSNEWTON Computes the reaction torques and forces in
     % each joint due to a motion defined by Q (joint variables), Qd (joint
     % speeds, and Qdd (joint accelerations). All mass, center of gravity
     % and inertia information is taken from the robot object, so this must
     % be specified in the class.
+    % 
+    % Note! This function is slow in matlab code, but can be compiled into
+    % a mex quite easily. Simply run the command "RU.make" in your command
+    % line.
     %
-    % [tau, f] = inverseDynamicsNewton(DH_ext, Xlist, Q, Qd, Qdd)
+    % wrench = inverseDynamicsNewton(DH_ext, Xlist, Q, Qd, Qdd)
     %
-    % [tau, f] = inverseDynamicsNewton(props, Q, Qd, Qdd, Xtool)
+    % wrench = inverseDynamicsNewton(props, Q, Qd, Qdd, Xtool)
     %   additionally adds end effector effect.
     %
-    % [tau, f] = inverseDynamicsNewton(props, Q, Qd, Qdd, ___, outputFrame)
-    %   allows one to choose which frame the forces should be resolved in.
+    % wrench = inverseDynamicsNewton(props, Q, Qd, Qdd, ___, outputFrame)
+    %   allows one to choose which frame the wrench should be resolved in.
     %
-    % [tau, f] = inverseDynamicsNewton(props, Q, Qd, Qdd, ___, outputFrame, g, Rbase)
+    % wrench = inverseDynamicsNewton(props, Q, Qd, Qdd, ___, outputFrame, g, Rbase)
     %   Additionally specifies the gravity direction vector and the base
     %   rotation of the robot.
     %
-    % [tau, f, extra] = inverseDynamicsNewton(____) additionally outputs a
+    % [wrench, extra] = inverseDynamicsNewton(____) additionally outputs a
     %   structure with the following variables: alpha, omega (w), ae, ac.
     %   
     % Inputs:
@@ -54,7 +58,7 @@ function [tauOut, ftOut, extraOut] = ...
     %           * -1: Forces are resolved in the world frame.
     %   - g:  A 3x1 vector unit vector indicating the direction of the
     %         gravity. Will be scaled by the value of gravity returned
-    %         by utilities.g.
+    %         by utils.g.
     %         If this vector is set to identically [0 0 0], then gravity
     %         will be ignored.
     %         Default: [0 0 1].
@@ -64,12 +68,15 @@ function [tauOut, ftOut, extraOut] = ...
     %         Default: eye(3).
     %   
     % Outputs:
-    %   - tau [3 x DOF]: The reaction torques in each joint.
-    %   - f [3 x DOF]: The reaction forces in each joint.
+    %   - wrench [6 x DOF x N]: The wrench of reaction forces and torques in
+    %     each joint. If outputframe is set to 2, a DOF x N matrix is
+    %     returned instead.
     %   - extra (struct): Additional structure with rotation velocity,
     %     acceleration, and linear acceleration of the ends of links and
     %     center of gravities. All quantities are in standard units
     %     (rad/s^2, rad/s, m/s^2). All dimensions are [3 x DOF].
+    %
+    % See also: SerialManipulator.inverseDynamicsNewton.
 
     %% Parse arguments
 
@@ -107,15 +114,15 @@ function [tauOut, ftOut, extraOut] = ...
 
     m = Xrobot(:, 1)';
     rc = Xrobot(:, 2:4)';
-    I = inertiaTensor(Xrobot(:, 5:10));
+    I = SerialManipulator.inertiaTensor(Xrobot(:, 5:10));
 
     % If Xtool is non-zero, then combine its inertia with that of the last
     % link, then proceed normally.
     if any(abs(Xtool) > eps)
-        Xend = PSDM.combineBodyInertias(Xrobot(DOF, :), Xtool);
+        Xend = RU.combineBodyInertias(Xrobot(DOF, :), Xtool);
         m(end) = Xend(1);
         rc(:, end) = Xend(1, 2:4)';
-        I(:, :, end) = inertiaTensor(Xend(1, 5:10));
+        I(:, :, end) = SerialManipulator.inertiaTensor(Xend(1, 5:10));
     end
 
     % Check Q vectors
@@ -140,8 +147,8 @@ function [tauOut, ftOut, extraOut] = ...
     %% Check if MEX exists, if so, run that
     if coder.target('matlab')
         try
-            [tauOut, ftOut, extraOut] = ...
-                PSDM.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
+            [wrench, extra] = ...
+                RU.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
             return;
         catch
             warning("Could not run mex file! Likely need to compile RU toolbox with RU.make.");
@@ -156,20 +163,19 @@ function [tauOut, ftOut, extraOut] = ...
     props.DH = DH;
     props.rc = rc;
     props.m = m;
-    props.g = -g * utilities.g;
+    props.g = -g * utils.g;
     props.I = I;
     props.lt = lt; % logical zero if revolute, logical 1 if prismatic
-    props.qsign =qsign;
+    props.qsign = qsign;
     props.Rbase = Rbase;   
     
     % Pre-init variables
-    tau = zeros(3, DOF, N);
-    ft = zeros(3, DOF, N);
+    wrench1 = zeros(6, DOF, N);
     extra = repmat(struct('alpha', nan(3, DOF), ...
-                              'w', nan(3, DOF), ...
-                              'ae', nan(3, DOF), ...
-                              'ac', nan(3, DOF)), ...
-                      [1 N]);
+                          'w', nan(3, DOF), ...
+                          'ae', nan(3, DOF), ...
+                          'ac', nan(3, DOF)), ...
+                   [1 N]);
     
     % Run loop in parallel if possible.
     % Use parallel if in matlab and parallel pool open, or if using matlab
@@ -184,7 +190,7 @@ function [tauOut, ftOut, extraOut] = ...
      
         % Parfor loop
         parfor j = 1:N
-            [tau(:, :, j), ft(:, :, j), extra(j)] = ...
+            [wrench1(:, :, j), extra(j)] = ...
                 mainNELoop(props, Q(:, j), Qd(:, j), Qdd(:, j), outputFrame);
         end 
         
@@ -192,33 +198,28 @@ function [tauOut, ftOut, extraOut] = ...
         
         % Regular for loop
         for j = 1:N
-            [tau(:, :, j), ft(:, :, j), extra(j)] = ...
+            [wrench1(:, :, j), extra(j)] = ...
                 mainNELoop(props, Q(:, j), Qd(:, j), Qdd(:, j), outputFrame);
         end
         
     end
     
-    % If user has requested outputFrame 2, need to re-arrange some things
+    % Output should be in correct frame, but if in frame two, need to
+    % rearrange some things before assigning the output.
     if outputFrame == int8(2)
-        tauOut = zeros(DOF, N);
-        ftOut = [];
-        if nargout > 2
-            extraOut = extra;
-        end
-        tauOut(lt, :) = ft(3, lt, :);
-        tauOut(~lt, :) = tau(3, ~lt, :);
+        wrench = zeros(DOF, N);
+        wrench(lt, :) = wrench1(3, lt, :);
+        wrench(~lt, :) = wrench1(6, ~lt, :);
     else
-        tauOut = tau;
-        ftOut = ft;
-        extraOut = extra;
+        wrench = wrench1;
     end
     
 end
 
 %% Main Newton Euler Function
 
-function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
-    % Computes tau, f, and extra variables from props (property list of
+function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
+    % Computes the wrench f and extra variables from props (property list of
     % manipulator), Q, Qd, Qdd (joint variables) and outputframe.
 
     extra = struct;
@@ -238,8 +239,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
 
     % To add force to joints, just set the wrench to the last columns of
     % these two variables
-    f = zeros(3, DOF+1);
-    tau = zeros(3, DOF+1);
+    % Initialize wrench1 as the wrench in each joint, in outputframe 1
+    wrench1 = zeros(6, DOF+1);
 
     % To include EE effect, set terminal conditions of f and tau to nonzero
     % values
@@ -288,7 +289,7 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         z_im1 = R_im1(:, 3);
 
         % Vector from o_i to o_i+1
-        r_i_ip1 = rot(DH(i, 2), 1)'*[DH(i, 1); 0; DH(i, 3)];
+        r_i_ip1 = utils.rotx(DH(i, 2))'*[DH(i, 1); 0; DH(i, 3)];
 
         % Vector from o_i to o_ci
         r_i_ci = r_i_ip1 + props.rc(:, i);
@@ -341,8 +342,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         % Retrieve the variables for this iteration.
         R_i = R(:, :, i+1);
         Rdiff_ip1 = Rdiff(:, :, i+1);        
-        f_ip1 = f(:, i+1);
-        tau_ip1 = tau(:, i+1);
+        f_ip1 = wrench1(1:3, i+1);
+        tau_ip1 = wrench1(4:6, i+1);
         alpha_i = alpha(:, i+1);
         w_i = w(:, i+1);
         ac_i = ac(:, i+1);
@@ -372,8 +373,7 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
             + cross( w_i, I_i * w_i );
 
         % Store in arrays
-        f(:, i) = f_i;
-        tau(:, i) = tau_i;
+        wrench1(:, i) = vertcat(f_i, tau_i);
 
     end
 
@@ -383,8 +383,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
     extra.ae = ae(:, 2:end);
     extra.ac = ac(:, 2:end);
 
-    tauT = zeros(3, DOF);
-    fT = zeros(3, DOF);
+    % Initialize a wrenchT vector, the wrench in the transformed frame.
+    wrench = zeros(6, DOF);
 
     % Put back everything into the correct frame (depending on what frame
     % was requested
@@ -392,8 +392,7 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
 
         case int8(1)
             % Nothing to do, just trim down variables
-            fT(:, :) = f(:, 1:DOF);
-            tauT(:, :) = tau(:, 1:DOF);
+            wrench(:, :) = wrench1(:, 1:DOF);
             return;
             
         case {int8(0), int8(2)}
@@ -413,8 +412,8 @@ function [tauT, fT, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
     % If we get here, need to adjust the frame.
     for i = 1:DOF
         % For all quantities, multiply by the appropriate rotation matrix.
-        fT(:, i) = Radj(:, :, i) * f(:, i);
-        tauT(:, i) = Radj(:, :, i) * tau(:, i);
+        wrench(1:3, i) = Radj(:, :, i) * wrench1(1:3, i);
+        wrench(4:6, i) = Radj(:, :, i) * wrench1(4:6, i);
 
         extra.alpha(:, i) = Radj(:, :, i) * alpha(:, i);
         extra.w(:, i) = Radj(:, :, i) * w(:, i);
@@ -435,59 +434,5 @@ function R = makeDHRot(theta, alpha)
     R = [ct, -st*ca, st*sa;
          st, ct*ca, -ct*sa;
          0, sa, ca];
-     
-end
-
-function R = rot(angle, axis)
-    % ROT Generates a rotation matrix along a principle coordinate.
-    % Angle is in radians. Axis is 1 for x, 2 for y, 3 for z.
-    %
-    % R = rot(theta, axis) returns the 3x3 rotation matrix for a
-    % theta radian rotation about axis.
-    
-    c = permute(cos(angle(:)), [2 3 1]);
-    s = permute(sin(angle(:)), [2 3 1]);
-    N = numel(s);
-    z = zeros(1,1,N);
-    o = ones(1,1,N);
-
-    switch axis
-        case 1
-            R = [o z z;
-                 z c -s;
-                 z s c];
-        case 2
-            R = [c z s;
-                 z o z;
-                 -s z c];
-        case 3
-            R = [c -s z;
-                 s c z;
-                 z z o];
-        otherwise
-            error("Axis must be 1-3 (for x, y and z)");
-    end
-    
-end
-
-function I = inertiaTensor(Ilist_in)
-    % INERTIATENSOR Returns the inertia tensor from a list of inertia
-
-    if ~ isa(Ilist_in, 'double')
-        Ilist = Ilist_in.s_Ilist;
-    else
-        Ilist = Ilist_in;
-    end
-
-    Ixx = permute( Ilist(:, 1), [3 2 1]);
-    Iyy = permute( Ilist(:, 2), [3 2 1]);
-    Izz = permute( Ilist(:, 3), [3 2 1]);
-    Ixy = permute( Ilist(:, 4), [3 2 1]);
-    Ixz = permute( Ilist(:, 5), [3 2 1]);
-    Iyz = permute( Ilist(:, 6), [3 2 1]);
-    
-    I = [Ixx Ixy Ixz;
-         Ixy Iyy Iyz;
-         Ixz Iyz Izz];
      
 end

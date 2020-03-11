@@ -1,4 +1,4 @@
-function mask = findCorrelationMask(DH_ext, X, g_in, E, typeID, tol_in, v_in)
+function mask = findCorrelationMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     % FINDCORRELATIONMASK Finds the correlation mask for an exponent map E
     % and a robot DH_ext, X.
     %
@@ -37,7 +37,7 @@ function mask = findCorrelationMask(DH_ext, X, g_in, E, typeID, tol_in, v_in)
     
     tfunc = tic;
     
-    Nterms = size(E, 2);
+    Nterms = size(Em, 2);
 
     % Number of values to generate
     Ntestmult = 1.2;
@@ -53,12 +53,10 @@ function mask = findCorrelationMask(DH_ext, X, g_in, E, typeID, tol_in, v_in)
     [Q, Qd, Qdd, tau] = PSDM.genTestPoses(DH_ext, X, g, Ntests, 1, typeID);
     
     % Make information matrix    
-    Y = PSDM.genTermValues(Q, Qd, Qdd, E);
+    Y = PSDM.genTermValues(Q, Qd, Qdd, Em);
 
     % Solve for each of the DOFs
-    % Do time estimate for this?
     theta = doRegression(Y, tau);
-    % theta = Y\tau;    
 
     % Solve for masks
     mask = any( abs(theta) > tol , 2)';

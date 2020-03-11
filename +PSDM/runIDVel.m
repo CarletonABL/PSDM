@@ -1,4 +1,4 @@
-function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
+function [Ep_vel, P_vel] = runIDVel(DH_ext, X, Ep_accel, tol_in, v_in)
     % RUNIDVEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling), but only for the velocity terms.
     %
@@ -25,7 +25,6 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
     
     % Check inputs
     assert(size(DH_ext, 2) == 6, "Invalid DH table");
-    assert(all(DH_ext(:, 5) == 0), "This function does not currently work on prismatic joint robots");
     assert(all(abs(DH_ext(:, 6)) == 1), "Link sign column appears invalid. All numbers must be -1 or 1!");
     assert(size(X, 2) == 10 && size(X, 1) == size(DH_ext, 1), "X appears to be the wrong size!");
     assert(all(X(:, [1, 5, 6, 7]) >= 0, 'all'), "Negative masses and principle inertias Ixx Iyy Izz are not possible!")
@@ -37,16 +36,16 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
     t = tic;
     
     % Get general term map
-    E1 = PSDM.genSearchTerms(DOF, 'velocity', E_accel);
+    Em_vel = PSDM.getSetYm(DH_ext, 'velocity', Ep_accel);
     
-    Nterms = size(E1, 2);
+    Nterms = size(Em_vel, 2);
     Nterms_test = Nterms / (DOF + nchoosek(DOF, 2));
     
     % Print, if required
     utilities.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
     
     % Initialize some terms
-    velTerms = E1((2*DOF+1):(3*DOF), :);
+    velTerms = Em_vel((3*DOF+1):(4*DOF), :);
     
     % Preallocation some variables
     jointCombinations = nchoosek(1:DOF, 2); % Generate possible coriolis combinations
@@ -71,16 +70,16 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
         % Combine with existing mast
         maskCombined = all([mask; jointMask], 1);
         
-        Ejoint = E1(:,maskCombined);
+        Ep_joint = Em_vel(:,maskCombined);
         
         utilities.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
         
-        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'centripital', j}, tol, v);
+        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ep_joint, {'centripital', j}, tol, v);
         
         mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );   
         
-        Ei{j} = Ejoint(:, maskCorr);
-        Pi{j} = PSDM.findBaseParams(DH_ext, X, [], Ejoint(:, maskCorr), {'centripital', j}, [], tol, v);
+        Ei{j} = Ep_joint(:, maskCorr);
+        Pi{j} = PSDM.findBaseParams(DH_ext, X, [], Ep_joint(:, maskCorr), {'centripital', j}, [], tol, v);
         
     end
     
@@ -99,22 +98,22 @@ function [E, P] = runIDVel(DH_ext, X, E_accel, tol_in, v_in)
         % Combine with existing mask
         maskCombined = all([mask; jointMask], 1);
         
-        Ejoint = E1(:, maskCombined);
+        Ep_joint = Em_vel(:, maskCombined);
 
         utilities.vprint(v, '\tSearching in joints %d/%d (%d terms)...\n', int32(j(1)), int32(j(2)), int32(sum(maskCombined)));  
         
-        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ejoint, {'coriolis', j}, tol, v);
+        maskCorr = PSDM.findCorrelationMask(DH_ext, X, [], Ep_joint, {'coriolis', j}, tol, v);
         
         mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );    
         
-        Ei{DOF+i} = Ejoint(:, maskCorr);
-        Pi{DOF+i} = PSDM.findBaseParams(DH_ext, X, [], Ejoint(:, maskCorr), {'coriolis', j}, [], tol, v);
+        Ei{DOF+i} = Ep_joint(:, maskCorr);
+        Pi{DOF+i} = PSDM.findBaseParams(DH_ext, X, [], Ep_joint(:, maskCorr), {'coriolis', j}, [], tol, v);
         
     end
     
     % Solve for masks
     utilities.vprint(v, "\tCombining terms:\n");
-    [E, P] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'velocity', tol, v);
+    [Ep_vel, P_vel] = PSDM.combineTerms(DH_ext, X, [], Ei, Pi, 'velocity', tol, v);
 
     utilities.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(sum(mask)), toc(t));
    

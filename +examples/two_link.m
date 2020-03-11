@@ -47,11 +47,31 @@ tau_rne = PSDM.inverseDynamicsNewton(DH_ext, X, Q, Qd, Qdd, 2, g);
 % Use PSDM to get torques
 tau_psdm = PSDM.inverseDynamics(E, P, Theta, Q, Qd, Qdd);
 
-fprintf('Max error: %.5g\n', max(abs(tau_rne - tau_psdm), [], 'all'));
+fprintf('Max inverse dynamics error: %.5g\n', max(abs(tau_rne - tau_psdm), [], 'all'));
+
+% Test forward dynamics
+Qdd_psdm = PSDM.forwardDynamics(E, P, Theta, Q, Qd, tau_psdm);
+fprintf('Max forward dynamics error: %.5g\n', max(abs(Qdd_psdm - Qdd), [], 'all'));
 
 %% Faster real time code
 
-% Generate some random test states
+% Generate dedicated function
+
+addpath(fullfile(utilities.PSDMDir, 'temp'));
+filename_inverse = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_twolink.m');
+filename_forward = fullfile( utilities.PSDMDir, 'temp', 'PSDM_forwardDynamics_twolink.m');
+doMex = true; % Whether or not to mex result for speed
+doPar = true; % Whether to evaluate states in parallel
+PSDM.makeInverseDynamics(filename_inverse, E, P, Theta, ...
+   'do_mex', doMex, 'parallel', doPar);
+PSDM.makeForwardDynamics(filename_forward, E, P, Theta, ...
+   'do_mex', doMex, 'parallel', doPar);
+
+%% Test time with real time code
+% Note, may need to run this section twice to get good results, since
+% matlab takes more time to run new functions the first time.
+
+% Generate samples
 N = 10e5;
 DOF = 2;
 Q = (rand(DOF, N)-0.5) * (2*pi);
@@ -62,22 +82,22 @@ tic1 = tic;
 tau_psdm = PSDM.inverseDynamics(E, P, Theta, Q, Qd, Qdd);
 t1 = toc(tic1);
 
-fprintf("Default function took %.3g seconds per state.\n", t1/N);
-
-%% Generate dedicated function
-
-% Make temporary director
-
-addpath(fullfile(utilities.PSDMDir, 'temp'));
-filename = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_twolink.m');
-doMex = true; % Whether or not to mex result for speed
-doPar = true; % Whether to evaluate states in parallel
-PSDM.makeInverseDynamics(filename, E, P, Theta, ...
-    'do_mex', doMex, 'parallel', doPar);
-
+fprintf("Default inverse dynamics function took %.3g seconds per state.\n", t1/N);
 
 tic2 = tic;
 tau_psdm_opt = PSDM_inverseDynamics_twolink_mex(Q, Qd, Qdd);
 t2 = toc(tic2);
 
-fprintf("Optimized function took %.3g seconds per state.\n", t2/N);
+fprintf("Optimized inverse dynamics function took %.3g seconds per state.\n", t2/N);
+
+tic3 = tic;
+Qdd_psdm = PSDM.forwardDynamics(E, P, Theta, Q, Qd, tau_psdm);
+t3 = toc(tic3);
+
+fprintf("Default forward dynamics function took %.3g seconds per state.\n", t3/N);
+
+tic4 = tic;
+Qdd_psdm_opt = PSDM_forwardDynamics_twolink_mex(Q, Qd, tau_psdm);
+t4 = toc(tic4);
+
+fprintf("Optimized forward dynamics function took %.3g seconds per state.\n", t4/N);

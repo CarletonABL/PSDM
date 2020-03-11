@@ -41,7 +41,8 @@ function [Q, Qd, Qdd, tau] = genTestPoses(DH_ext, X, g_in, Nq, Nt, type_in)
     %% Try to run mex
     
     % Run mex, if possible
-    if coder.target('matlab')
+    c = PSDM.config;
+    if coder.target('matlab') && c.allow_mex
         
         try
             if nargout > 3
@@ -83,8 +84,7 @@ function [Q, Qd, Qdd, tau] = genTestPoses(DH_ext, X, g_in, Nq, Nt, type_in)
             tau = zeros(Nq, DOF, Nt);
             
             for j = 1:Nt
-               tauAll = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(0), g);
-               tau(:, :, j) = permute(tauAll(3, :, :), [3 1 2]);
+               tau(:, :, j) = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(2), g)';
             end
             
         end
@@ -114,10 +114,7 @@ function [Q, Qd, Qdd, tau] = genTestPoses(DH_ext, X, g_in, Nq, Nt, type_in)
             
             tau = zeros(Nq, DOF, Nt);
             for j = 1:Nt
-                
-               tauAll = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(0), [0 0 0]');
-               tau(:, :, j) = permute(tauAll(3, :, :), [3 1 2]);
-               
+               tau(:, :, j) = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(2), [0 0 0]')';
             end
             
         end
@@ -149,18 +146,18 @@ function [Q, Qd, Qdd, tau] = genTestPoses(DH_ext, X, g_in, Nq, Nt, type_in)
             
             tau = zeros(Nq, DOF, Nt);
             for j = 1:Nt
-            
-               tauAll = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd, Qdd, int8(0), [0 0 0]');
+                
+               tau_j = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd, Qdd, int8(2), [0 0 0]')';
                
                if strcmp(type, 'coriolis')
                     Qd_cent1 = Qd; Qd_cent1(joints(2), :) = zeros(1, Nq);
                     Qd_cent2 = Qd; Qd_cent2(joints(1), :) = zeros(1, Nq);
-                    tauCent1 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent1, Qdd, int8(0), [0 0 0]');
-                    tauCent2 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent2, Qdd, int8(0), [0 0 0]');
-                    tauAll = tauAll - tauCent1 - tauCent2;
+                    tauCent1 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent1, Qdd, int8(2), [0 0 0]')';
+                    tauCent2 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent2, Qdd, int8(2), [0 0 0]')';
+                    tau_j = tau_j - tauCent1 - tauCent2;
                end
                
-               tau(:, :, j) = permute(tauAll(3, :, :), [3 1 2]);
+               tau(:, :, j) = tau_j;
             end
             
         end % End of "give torque"
@@ -181,8 +178,7 @@ function [Q, Qd, Qdd, tau] = genTestPoses(DH_ext, X, g_in, Nq, Nt, type_in)
             
             tau = zeros(Nq, DOF, Nt);
             for j = 1:Nt
-               tauAll = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(0), g);
-               tau(:, :, j) = permute(tauAll(3, :, :), [3 1 2]);
+               tau(:, :, j) = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(2), g)';
             end
             
         end

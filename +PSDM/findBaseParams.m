@@ -1,4 +1,4 @@
-function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
+function P = findBaseParams(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
     % FINDBASEPARAMS Identifies linear dependencies in the theta vector of
     % an exponent map E and robot defined by the tuple {DH_ext, X, g}.
     % If the map E is already reduced by a matrix P, supply that as P1.
@@ -14,11 +14,11 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
     
     % Fill in P1, also check size
     if nargin < 6 || isempty(P1_in)
-        P1 = repmat(eye(size(E, 2)), [1 1 DOF]);
+        P1 = repmat(eye(size(Ep, 2)), [1 1 DOF]);
     else
         P1 = P1_in;
     end
-    assert(size(P1, 1) == size(E, 2), "Mismatched P1 and E sizes!");
+    assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
 
     
     if nargin < 7 || isempty(tol_in)
@@ -47,7 +47,7 @@ function P = findBaseParams(DH_ext, X, g, E, idType_in, P1_in, tol_in,  v_in)
     [Q, Qd, Qdd, tau] = PSDM.genTestPoses(DH_ext, X, g, Nq, Nt, idType);
     
     % Make Y matrix
-    Y = PSDM.genTermValues(Q, Qd, Qdd, E);
+    Y = PSDM.genTermValues(Q, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
     
     % Y tile is Y for each joint
