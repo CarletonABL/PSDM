@@ -47,4 +47,7 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     % Find base parameters of "combined" system
     P = PSDM.findReductionMatrix(DH_ext, X, g, E, idType, P_combined, tol, v);
     
+    % Round away numerical errors
+    P( abs(P) < 1e-14 ) = 0;
+    
 end

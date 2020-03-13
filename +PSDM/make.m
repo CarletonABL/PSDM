@@ -24,8 +24,8 @@ function make(functions)
         ARGS = cell(1,1);
         ARGS{1} = cell(5,1);
         ARGS{1}{1} = coder.typeof(0,[10  6],[1 0]);
-        ARGS{1}{2} = coder.typeof(0,[10 10],[1 0]);
-        ARGS{1}{3} = coder.typeof(0,[3 1]);
+        ARGS{1}{2} = coder.typeof(0,[3 1]);
+        ARGS{1}{3} = coder.typeof(0,[10 10],[1 0]);
         ARGS{1}{4} = coder.typeof(0);
         ARGS{1}{5} = coder.typeof(false);
 
@@ -51,8 +51,8 @@ function make(functions)
         ARGS = cell(1,1);
         ARGS{1} = cell(5,1);
         ARGS{1}{1} = coder.typeof(0,[10  6],[1 0]);
-        ARGS{1}{2} = coder.typeof(0,[10 10],[1 0]);
-        ARGS{1}{3} = coder.typeof(0,[3 1]);
+        ARGS{1}{2} = coder.typeof(0,[3 1]);
+        ARGS{1}{3} = coder.typeof(0,[10 10],[1 0]);
         ARGS{1}{4} = coder.typeof(0);
         ARGS{1}{5} = coder.typeof(false);
 

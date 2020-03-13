@@ -8,32 +8,14 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
 
     DOF = size(P, 3);
     
-    [Up, Up1, A, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode(E, P);
+    % Make base code
+    [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode(E, P);
     
-    %% Build up Y matrix   
-    M = size(Up, 2);
-    Yels = repelem({''}, M);
-    for i = 1:M
-        
-        Up_ind = find( all( Up1 == Up(:, i) ), 1);
-        A_ind = find( all( A1 == A(:, i) ), 1);
-        
-        Yels{i} = sprintf('%s.*%s', A1names{A_ind}, Up1names{Up_ind});
-    end
-    Ycode = sprintf('Ypi = [%s];', strjoin(Yels, ','));
+    % Build up Y matrix   
+    Ycode = makeYMatrixCode(E, 'Ypi', Up1, Up1names, A1, A1names);
     
-    %% PTHETA CODE
-    
-    PTheta = zeros( size(P, 1), DOF );
-    for i = 1:DOF
-        PTheta(:, i) = P(:, :, i) * Theta;
-    end
-    
-    %PTheta( (abs(PTheta(:)) < 1e-13) ) = 0;
-    
-    PThetastr = mat2str(PTheta);
-    
-    PThetaCode = sprintf('PTheta = coder.const(%s);', PThetastr);  
+    % Build up PTheta code
+    PThetaCode = makePThetaCode(P, Theta, 'PTheta');  
     
     %% Make function
     

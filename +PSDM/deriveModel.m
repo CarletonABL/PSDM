@@ -1,6 +1,8 @@
-function [E, P] = deriveModel(DH_ext, X, g, tol, v, no_mex)
+function [E, P] = deriveModel(DH_ext, g_in, X_in, tol_in, v_in)
     % DERIVEMODEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling).
+    %
+    % [E, P] = deriveModel(DH_ext, g, X, tol, v)
     %
     % Inputs
     %   - DH_ext: a DOFx4-6 array of the DH params in the following order: 
@@ -13,14 +15,18 @@ function [E, P] = deriveModel(DH_ext, X, g, tol, v, no_mex)
     %           q_sign is a link direction number (-1 or 1). Allows you to
     %           change the sign of the joint variable. If column 6 is
     %           missing, will assume 1.
+    %   - g: A 3 x 1 gravity vector (must be unit size!!). Points upwards
+    %        against gravity. Default: [0;0;1] (z axis points upwards from
+    %        gravity).
     %   - X: A DOF x 10 matrix of the mass properties of the
     %        manipulator:
     %        [m_1  rcx_1  rcy_1  rcz_1  Ixx_1  Iyy_1  Izz_1  Ixy_1  Ixz_1  Iyz_1;
     %          :     :      :      :       :     :      :      :     :       :
-    %         m_n  rcx_n  rcy_n  rcz_n  Ixx_n  Iyy_n  Izz_n  Ixy_n  Ixz_n  Iyz_n];
-    %   - g: A 3 x 1 gravity vector (must be unit size!!). Points upwards
-    %        against gravity. Default: [0;0;1] (z axis points upwards from
-    %        gravity).
+    %         m_n  rcx_n  rcy_n  rcz_n  Ixx_n  Iyy_n  Izz_n  Ixy_n  Ixz_n  Iyz_n]
+    %        To successfully derive the PSDM model, this does not need to
+    %        be correct. It is only used to determine which elements of the
+    %        model are identically zero, and can be ignored.
+    %        Default: ones(DOF, 10)
     %   - tol: A tolerance used in the ID. Any factors below this tolerance
     %          (in estimation of the torques) is ignored. Defaut: 1e-11.
     %   - v: A verbosity flag. Set to false to suppress output. Default:
@@ -29,28 +35,43 @@ function [E, P] = deriveModel(DH_ext, X, g, tol, v, no_mex)
     %   See also PSDM.deriveGravityModel()
     
     %% Parse arguments
+    
+    DOF = size(DH_ext, 1);
 
-    if nargin < 3 || isempty(g)
+    % Parse g
+    if nargin < 2 || isempty(g_in)
         g = [0 0 1]';
         warning("Assuming g = [0;0;1]. Supply a proper g vector to suppress this warning.");
+    else
+        g = g_in;
     end
     
-    % Fill in inputs
-    if nargin < 4 || isempty(tol)
+    % Parse X
+    if nargin < 3 || isempty(X_in)
+        X = ones(DOF, 10);
+    else
+        X = X_in;
+    end
+    
+    % parse tolerance
+    if nargin < 4 || isempty(tol_in)
         tol = 1e-11;
+    else
+        tol = tol_in;
     end
-    if nargin < 5 || isempty(v)
+    
+    % Parse verbosity
+    if nargin < 5 || isempty(v_in)
         v = true;
-    end
-    if nargin < 6 || isempty(no_mex)
-        no_mex = false;
+    else
+        v = v_in;
     end
     
     % Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && ~no_mex && c.allow_mex
+    if coder.target('matlab') && c.allow_mex
         try
-            [E, P] = PSDM.deriveModel_mex(DH_ext, X, g, tol, v);
+            [E, P] = PSDM.deriveModel_mex(DH_ext, g, X, tol, v);
             return; 
         catch
            warning("PSDM is not compiled! PSDM.deriveModel will run slowly without compilation. Recommend running PSDM.make");
@@ -70,7 +91,7 @@ function [E, P] = deriveModel(DH_ext, X, g, tol, v, no_mex)
     t = tic;
     
     % Derive gravity model
-    [E_grav, P_grav] = PSDM.deriveGravityModel(DH_ext, X, g, tol, v);
+    [E_grav, P_grav] = PSDM.deriveGravityModel(DH_ext, g, X, tol, v);
 
     % Derive accel model
     [E_accel, P_accel] = PSDM.deriveAccelModel(DH_ext, X, tol, v);

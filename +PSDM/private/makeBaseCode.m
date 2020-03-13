@@ -1,4 +1,4 @@
-function [Up, Up1, A, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode(E, P)
+function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode(E, P)
     % Make the base code to generate the elements of A and Upsilon, which
     % is used in both the makeForwardDynamics and makeInverseDynamics
     % functions.
