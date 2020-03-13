@@ -23,12 +23,14 @@
 
 DH = [2.1   0	0     0   0   1;
       1.1   0	0     0   0   1];
+  
 %% 
 % We also need a gravity vector. This is a unit vector and is scaled by the 
 % gravitational constant internally. Here, gravity is pointing in the negative 
 % y direction.
 
 g = [0; 1; 0];
+
 %% 
 % Finally, we (optionally) need to define a vector of inertial parameters of 
 % the robot, X. This is *not* needed to run the derivation. But, it can be used 
@@ -47,16 +49,19 @@ g = [0; 1; 0];
 
 X = [1 -1 0 0 0 0 0.5 0 0 0;
      2 -1 0 0 0 0 0.3 0 0 0];
+ 
 %% 
 % We can also specify the tolerance (default is 1e-11) and verbosity (default 
 % is true).
 
 tolerance = [];
 verbosity = true;
+
 %% 
 % Now, we can run the derivation
 
 [E, P] = PSDM.deriveModel(DH, g, X, tolerance, verbosity);
+
 %% 
 % E is the exponent matrix which represents the terms of the final result. P 
 % is a page array of the two reduction matrices for each joint. Because this is 
@@ -64,6 +69,7 @@ verbosity = true;
 
 disp(E)
 disp(P)
+
 %% Testing
 % The PSDM model, defined by E and P, can be used either through full knowledge 
 % of X, the inertial parameters, or through experimental determination of the 
@@ -77,6 +83,7 @@ disp(P)
 % regression vector.
 
 Theta = PSDM.X2Theta(DH, X, g, E, P);
+
 %% 
 % Now, define some random poses.
 
@@ -85,23 +92,28 @@ DOF = 2;
 Q = (rand(DOF, N)-0.5) * (2*pi);
 Qd = (rand(DOF, N)-0.5);
 Qdd = (rand(DOF, N)-0.5);
+
 %% 
 % We can use the newton-euler algorithm to get the inverse dynamics.
 
 tau_rne = PSDM.inverseDynamicsNewton(DH, X, Q, Qd, Qdd, 2, g)
+
 %% 
 % Then use the PSDM model, and check the error:
 
 tau_psdm = PSDM.inverseDynamics(E, P, Theta, Q, Qd, Qdd)
 fprintf('Max inverse dynamics error: %.5g\n', max(abs(tau_rne - tau_psdm), [], 'all'));
+
 %% 
 % We can also validate the forward dynamic model by ensuring that we get the 
 % same joint accelerations we started with.
 
 Qdd_psdm = PSDM.forwardDynamics(E, P, Theta, Q, Qd, tau_psdm)
 fprintf('Max forward dynamics error: %.5g\n', max(abs(Qdd_psdm - Qdd), [], 'all'));
+
 %% 
 % The errors should be negligible (machine precision levels).
+
 %% Faster real time code
 % The default PSDM functions for inverse and forward dynamics are a bit slow 
 % since there is some pre-processing to be done at each step, and complex indexing 
@@ -116,6 +128,7 @@ fprintf('Max forward dynamics error: %.5g\n', max(abs(Qdd_psdm - Qdd), [], 'all'
 addpath(fullfile(utilities.PSDMDir, 'temp'));
 filename_inverse = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_twolink.m');
 filename_forward = fullfile( utilities.PSDMDir, 'temp', 'PSDM_forwardDynamics_twolink.m');
+
 %% 
 % Can decide if you want to mex-compile your code or not, as well as whether 
 % or not to leverage parallel computing (requires the parallel computing toolbox). 
@@ -123,6 +136,7 @@ filename_forward = fullfile( utilities.PSDMDir, 'temp', 'PSDM_forwardDynamics_tw
 
 doMex = true; % Whether or not to mex result for speed
 doPar = true; % Whether to evaluate states in parallel
+
 %% 
 % Now, derive functions
 
@@ -130,6 +144,7 @@ PSDM.makeInverseDynamics(filename_inverse, E, P, Theta, ...
    'do_mex', doMex, 'parallel', doPar);
 PSDM.makeForwardDynamics(filename_forward, E, P, Theta, ...
    'do_mex', doMex, 'parallel', doPar);
+
 %% Test Evaluation Speed
 % The code below generations a large number of sample poses and checks the evaluation 
 % speed of the forward and inverse dynamics functions.
