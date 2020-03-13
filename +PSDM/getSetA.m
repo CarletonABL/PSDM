@@ -12,10 +12,14 @@ function A = getSetA(DOF, type)
     %       represented as a (2*DOF)xM integer matrix of exponents on the
     %       functions: Qd, and Qdd, respectively.
     
+    %% Parse inputs
+    
     % Handle incomplete arguments
     if nargin < 2
         type = 'all';
     end
+    
+    %% Start function
     
     % Gravity accel
     Agrav = zeros(2*DOF, 1, 'uint8');

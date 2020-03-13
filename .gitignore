@@ -21,6 +21,7 @@ scripts/
 *.autosave
 *.asv
 save_data/*
+\+PSDM_v1
 
 !temp/README*
 

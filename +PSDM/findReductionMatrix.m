@@ -1,11 +1,15 @@
-function P = findBaseParams(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
-    % FINDBASEPARAMS Identifies linear dependencies in the theta vector of
+function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
+    % FINDREDUCTIONMATRIX Identifies linear dependencies in the theta vector of
     % an exponent map E and robot defined by the tuple {DH_ext, X, g}.
     % If the map E is already reduced by a matrix P, supply that as P1.
+    %
+    % P = findReductionMatrix(DH_ext, X, g, Ep, idType, P1, tol,  v)
 
+    %% Process inputs
+    
     DOF = size(DH_ext, 1);
     
-    %% Process inputs
+    % Parse idType
     if nargin < 5 || isempty(idType_in)
         idType = 'gravity';
     else
@@ -20,13 +24,14 @@ function P = findBaseParams(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
     end
     assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
 
-    
+    % Parse tolerance
     if nargin < 7 || isempty(tol_in)
         tol = 1e-14;
     else
         tol = tol_in;
     end
     
+    % Parse verbosity
     if nargin < 8 || isempty(v_in)
         v = true;
     else
@@ -34,55 +39,74 @@ function P = findBaseParams(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
     end
     
     %% Start function
-
     t = tic;
     
     % Define some constants
     DOF = size(DH_ext, 1);
     
+    % Get size of incoming terms.
     M = size(P1, 2);
+    
+    % Number of joint states to test at. Use a number greater than
+    % required to reduce error
     Nq = max(round(M * 2), DOF*10*2);
-    Nt = round(DOF * 10); %Magic number is 243 for accel (142/28 terms), and 25 for grav (15/6 terms)
     
-    [Q, Qd, Qdd, tau] = PSDM.genTestPoses(DH_ext, X, g, Nq, Nt, idType);
+    % Max number of inertial parameters is DOF*10
+    Nt = round(DOF * 10); 
     
-    % Make Y matrix
-    Y = PSDM.genTermValues(Q, Qd, Qdd, Ep);
+    % Generate samples
+    [Q, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
+    
+    % Make Y matrix, transform it with P1, if given
+    Y = PSDM.generateYp(Q, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
     
-    % Y tile is Y for each joint
-    Ytile = tileArray(Yi, DOF);
+    % Find theta vector for each DOF of matrix
+    % This function just runs the argument function in a loop, but will do
+    % it in parallel if the computer supports it.
+    Ti = utilities.iparfor( ...
+            @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
+            DOF, ...
+            [M, Nt]);
     
-    tau_stack = permute( ...
-                    utilities.vertStack(tau, 2), ...
-                    [1 3 2]);
-   
-    % Solve
-    if coder.target('matlab'); warnStruct = warning('off', 'MATLAB:rankDeficientMatrix'); end
-    T = Ytile \ tau_stack;
-    if coder.target('matlab'); warning(warnStruct); end
+    % Stack T vectors vertically
+    T = utilities.vertStack(Ti, 3);
 
     % Round out any columns smaller than a tolerance
     T(:, all(abs(T) < tol, 1)) = 0;
     
-    % Reduce to minimum parameters    
+    % Reduce to minimum parameters. Since we stacked all Theta vectors
+    % vertically, the result will be a vertical stacking of the P_inv
+    % vectors.
     P_stack_inv = utilities.rref(T', [], true);
     
+    % The rank of the matrix
     b = size(P_stack_inv, 1);
     
+    % Get the pseudoinverse.
     P_stack = pinv(P_stack_inv);
     
+    % Un-stack the matrix in a loop
     P2 = zeros(M, b, DOF);
     for i = 1:DOF
         P2(:, :, i) = P_stack((1:M)+(i-1)*M, :);
     end
+    
+    % Combine P1, P2 into final P matrix
+    P = utilities.blockprod(P1, P2);
 
-    % Find new Y and T
+    %% Double check reprojection error to make sure no errors occured
+    
+    % Y tile is Y for each joint
+    Ytile = tileArray(Yi, DOF);
+    tau_stack = permute( ...
+                    utilities.vertStack(tau, 2), ...
+                    [1 3 2]);
+    
+    % Transform with P reduction matrices.
     Ymin = Ytile * P_stack;
     Tmin = P_stack_inv * T;
     
-    P = utilities.blockprod(P1, P2);
-
     % Find reprojection error
     r = Ymin*Tmin - tau_stack;
     
@@ -95,6 +119,7 @@ function P = findBaseParams(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
         end
     end
     
+    % Output information, if required.
     utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n\t\tReprojection error is %.3g\n", ...
         int32(size(P1, 1)), int32(M), int32(b), toc(t), max(abs(r), [], 'all'));
         
@@ -116,4 +141,20 @@ function B = tileArray(A, N)
         end
     end
 
+end
+
+
+function T = doRegression(Y, tau, tol)
+    % Performs the regression Y\tau, but removes any "zero" columns from Y
+    % first, which prevents ill-defined results.
+
+    if nargin < 3 || isempty(tol)
+        tol = 1e-11;
+    end
+
+    T = zeros(size(Y, 2),  size(tau, 2));
+    nonzero_mask = any( abs( Y ) > tol , 1 );
+    
+    T(nonzero_mask, : ) = Y(:, nonzero_mask) \ tau;
+    
 end

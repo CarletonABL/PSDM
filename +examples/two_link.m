@@ -23,16 +23,17 @@ g = [0; 1; 0];
 tolerance = [];
 
 % Verbosity
-verbosity = true;
+verbosity = false;
 
 % Order of arguments: DHext, X, g, tolerance (empty for default), verbosity
 % flag.
-[E, P] = PSDM.runID(DH_ext, X, g, tolerance, verbosity);
+tic
+[E, P] = PSDM.deriveModel(DH_ext, X, g, tolerance, verbosity);
+toc
 
 %% Testing
-
 % Get theta directly from known values of X
-Theta = PSDM.getTheta(DH_ext, X, g, E, P);
+Theta = PSDM.X2Theta(DH_ext, X, g, E, P);
 
 % Generate some random test poses
 N = 5;

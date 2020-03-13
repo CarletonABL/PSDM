@@ -11,9 +11,9 @@ function make(functions)
     
     %% RUNID
     
-    if any(strcmp(functions, 'runID')) || any(strcmp(functions, 'all'))
+    if any(strcmp(functions, 'deriveModel')) || any(strcmp(functions, 'all'))
         
-        fprintf("Compiling PSDM.runID into mex file... ");
+        fprintf("Compiling PSDM.deriveModel into mex file... ");
 
         cfg = coder.config('mex');
         cfg.GenerateReport = true;
@@ -31,7 +31,7 @@ function make(functions)
 
         cd(fullfile(path, '+PSDM'));
 
-        codegen -config cfg -I path +PSDM/runID -args ARGS{1}
+        codegen -config cfg -I path +PSDM/deriveModel -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");
@@ -39,8 +39,8 @@ function make(functions)
     
     %% RUNIDGRAVITY
     
-    if any(strcmp(functions, 'runIDGravity')) || any(strcmp(functions, 'all'))
-        fprintf("Compiling PSDM.runIDGravity into mex file... ");
+    if any(strcmp(functions, 'deriveGravityModel')) || any(strcmp(functions, 'all'))
+        fprintf("Compiling PSDM.deriveGravityModel into mex file... ");
 
         cfg = coder.config('mex');
         cfg.GenerateReport = true;
@@ -58,7 +58,7 @@ function make(functions)
 
         cd(fullfile(path, '+PSDM'));
 
-        codegen -config cfg -I path +PSDM/runIDGravity -args ARGS{1}
+        codegen -config cfg -I path +PSDM/deriveGravityModel -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");
@@ -66,8 +66,8 @@ function make(functions)
     
     %% GENTERMVALUES
     
-    if any(strcmp(functions, 'genTermValues')) || any(strcmp(functions, 'all'))
-        fprintf("Compiling PSDM.genTermValues into mex file... ");
+    if any(strcmp(functions, 'generateYp')) || any(strcmp(functions, 'all'))
+        fprintf("Compiling PSDM.generateYp into mex file... ");
 
         cfg = coder.config('mex');
         cfg.GenerateReport = true;
@@ -84,7 +84,7 @@ function make(functions)
 
         cd(fullfile(path, '+PSDM'));
 
-        codegen -config cfg -I path +PSDM/genTermValues -args ARGS{1}
+        codegen -config cfg -I path +PSDM/generateYp -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");
@@ -92,9 +92,9 @@ function make(functions)
     
     %% GENTESTPOSES
     
-    if any(strcmp(functions, 'genTestPoses')) || any(strcmp(functions, 'all'))
+    if any(strcmp(functions, 'generateSamples')) || any(strcmp(functions, 'all'))
     
-        fprintf("Compiling PSDM.genTestPoses into mex file... ");
+        fprintf("Compiling PSDM.generateSamples into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
         cfg = coder.config('mex');
@@ -117,7 +117,7 @@ function make(functions)
         ARGS{1}{6} = ARGS{1}{6}.makeHeterogeneous();
 
         cd(fullfile(path, '+PSDM'));
-        codegen -config cfg -I path +PSDM/genTestPoses -args ARGS{1}
+        codegen -config cfg -I path +PSDM/generateSamples -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");

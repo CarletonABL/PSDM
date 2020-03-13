@@ -1,10 +1,23 @@
-function Yp = genTermValues(Q, Qd, Qdd, E)
+function Yp = generateYp(Q, Qd, Qdd, E)
     % GENERATEYP Generates the regressor matrix Yp for a list of joint
     % angles Q, Qd, Qdd and an exponent matrix E.
     %
-    % v is a verbosity flag (default: true).
-        
-    % Special functionality for symbolic gamma
+    % Yp = generateYp(Q, Qd, Qdd, E)
+    
+    %% Preamble
+    
+    % Run mex, if possible
+    c = PSDM.config;
+    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex
+         try
+            Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
+            return; 
+         catch
+             warning("PSDM is not compiled! PSDM.generateYp will run slowly without compilation. Recommend running PSDM.make");
+         end
+    end
+    
+    %% Special functionality for symbolic gamma
     if coder.target('matlab') && isa(Q, 'sym')
         
         % Calculate the values of the generator function
@@ -15,18 +28,8 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
         
     end
     
-    % Run mex, if possible
-    c = PSDM.config;
-    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex
-         try
-            Yp = PSDM.genTermValues_mex(Q, Qd, Qdd, E);
-            return; 
-         catch
-             warning("PSDM is not compiled! This code will run slowly without compilation. Recommend running PSDM.make");
-         end
-    end
+    %% Otherwise, do function normally
     
-    % Otherwise, do function normally
     DOF = size(Q, 1);
     
     % Permute joint angles into 3rd dimension
@@ -42,31 +45,21 @@ function Yp = genTermValues(Q, Qd, Qdd, E)
     Eexp = vertcat( E > 0, E( (1:DOF), : ) > 1, E( 2*DOF+(1:DOF), : ) > 1, E(3*DOF+(1:DOF), : ) > 1 );
     gamma_exp = vertcat(gamma, gamma( (1:DOF), 1, : ), gamma( 2*DOF + (1:DOF), 1, : ), gamma( 3*DOF + (1:DOF), 1, :) );
 
+    % Indexing is the slowest operation here. Make it a bit better by
+    % pre-trimming E and gamma of any variables that do not occur in any of
+    % the terms
     trimMask = any(Eexp, 2);
-
     Eexp_trim = Eexp(trimMask, :);
     gamma_exp_trim = gamma_exp(trimMask, :, :);
     
-    % Get size
+    % Get sizes
     M = size(E, 2);
     N = size(Q, 3);
-    Yp = zeros(N, M);
     
-    if coder.target('matlab')
-        p = gcp('nocreate');
-        doPar = ~isempty(p);
-    else
-        doPar = true;
-    end
-    
-    if doPar
-        parfor m = 1:M
-            Yp(:, m) = prod( gamma_exp_trim( Eexp_trim(:, m), 1, : ), 1 );
-        end
-    else
-        for m = 1:M
-            Yp(:, m) = prod( gamma_exp_trim( Eexp_trim(:, m), 1, : ), 1 );
-        end
-    end
+    Yp = permute( ...
+            utilities.iparfor( ...
+                @(m) permute( prod( gamma_exp_trim( Eexp_trim(:, m), 1, : ), 1 ), [3 1 2]), ...
+                M, [N, 1]), ...
+            [1 3 2]);
     
 end

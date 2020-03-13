@@ -16,7 +16,8 @@ function Up = getSetUpsilon(DH_ext, order)
     lt = logical(DH_ext(:, 5));
     DOF = size(DH_ext, 1);
     
-    % Get zetas
+    
+    % Get zetas (in loop)
     n = zeros(DOF, 1); % Size of each zeta
     Z = cell(DOF, 1);
     for i = 1:DOF
@@ -28,7 +29,7 @@ function Up = getSetUpsilon(DH_ext, order)
         n(i) = size(Z{i}, 2);
     end
     
-    % Combine
+    % Combine zeta functions together into all possible combinations.
     
     % Get total number in set
     M = prod(n);

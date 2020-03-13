@@ -1,6 +1,11 @@
 function Upd = getSetUpsilon_diff(Up_in, DH_ext)
     % GETSETUPSILON_DIFF Returns the minimal set of functions which are all
-    % possible derivatives of a set of functions Up.
+    % possible derivatives of a set of functions Up. Used when doing the
+    % velocity model id.
+    %
+    % Upd = getSetUpsilon_diff(Up_in, DH_ext)
+    
+    %% Parse arguments
     
     DOF = size(DH_ext, 1);
     
@@ -13,6 +18,8 @@ function Upd = getSetUpsilon_diff(Up_in, DH_ext)
     end
     
     M = size(Up, 2);
+    
+    %% Start Function
     
     % Preallocate Upd to maximum possible size
     Upd_all = zeros(size(Up, 1), M*2*DOF, 'uint8');
@@ -39,7 +46,19 @@ end
 function [t, n] = diffUp(up, i, lt)
     % DIFFUP for a term up in Upsilon, differentiates it with respects to
     % the ith joint.
-        
+    %
+    % INPUTS:
+    %   -up: The single upsilon term.
+    %   -i: The joint variable which is being derived by.
+    %   -lt: The link type (false for revolute, true for prismatic).
+    %
+    % OUTPUTS:
+    %   -t: the derivative terms, of the same column dimension of up, and
+    %       either 1 or 2 columns wide.
+    %   -n: The number of derivative terms (equal to the column width of
+    %       t).
+    
+    % Figure out the DOF of the robot
     DOF = size(up, 1)/3;
     
     % Extract sin and cosin terms
@@ -58,6 +77,7 @@ function [t, n] = diffUp(up, i, lt)
         % Prismatic joint
         ld(i, 1) = max(l(i, 1) - 1, uint8(0));
         n = 1;
+        
     else
         % Revolute
         

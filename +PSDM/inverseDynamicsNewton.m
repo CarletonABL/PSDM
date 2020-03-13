@@ -114,15 +114,15 @@ function [wrench, extra] = ...
 
     m = Xrobot(:, 1)';
     rc = Xrobot(:, 2:4)';
-    I = SerialManipulator.inertiaTensor(Xrobot(:, 5:10));
+    I = inertiaTensor(Xrobot(:, 5:10));
 
     % If Xtool is non-zero, then combine its inertia with that of the last
     % link, then proceed normally.
     if any(abs(Xtool) > eps)
-        Xend = RU.combineBodyInertias(Xrobot(DOF, :), Xtool);
+        Xend = PSDM.combineBodyInertias(Xrobot(DOF, :), Xtool);
         m(end) = Xend(1);
         rc(:, end) = Xend(1, 2:4)';
-        I(:, :, end) = SerialManipulator.inertiaTensor(Xend(1, 5:10));
+        I(:, :, end) = inertiaTensor(Xend(1, 5:10));
     end
 
     % Check Q vectors
@@ -145,13 +145,14 @@ function [wrench, extra] = ...
     
     
     %% Check if MEX exists, if so, run that
-    if coder.target('matlab')
+    c = PSDM.config;
+    if coder.target('matlab') && c.allow_mex_rne
         try
             [wrench, extra] = ...
-                RU.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
+                PSDM.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
             return;
         catch
-            warning("Could not run mex file! Likely need to compile RU toolbox with RU.make.");
+            warning("Could not run mex file! Likely need to compile PSDM toolbox with PSDM.make.");
         end
     end
     
@@ -163,7 +164,7 @@ function [wrench, extra] = ...
     props.DH = DH;
     props.rc = rc;
     props.m = m;
-    props.g = -g * utils.g;
+    props.g = -g * utilities.g;
     props.I = I;
     props.lt = lt; % logical zero if revolute, logical 1 if prismatic
     props.qsign = qsign;
@@ -289,7 +290,7 @@ function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
         z_im1 = R_im1(:, 3);
 
         % Vector from o_i to o_i+1
-        r_i_ip1 = utils.rotx(DH(i, 2))'*[DH(i, 1); 0; DH(i, 3)];
+        r_i_ip1 = rot(DH(i, 2), 1)'*[DH(i, 1); 0; DH(i, 3)];
 
         % Vector from o_i to o_ci
         r_i_ci = r_i_ip1 + props.rc(:, i);
@@ -435,4 +436,57 @@ function R = makeDHRot(theta, alpha)
          st, ct*ca, -ct*sa;
          0, sa, ca];
      
+end
+
+
+function I = inertiaTensor(Ilist)
+    % INERTIATENSOR Returns the inertia tensor from a list of inertia
+    % values.
+
+    Ixx = permute( Ilist(:, 1), [3 2 1]);
+    Iyy = permute( Ilist(:, 2), [3 2 1]);
+    Izz = permute( Ilist(:, 3), [3 2 1]);
+    Ixy = permute( Ilist(:, 4), [3 2 1]);
+    Ixz = permute( Ilist(:, 5), [3 2 1]);
+    Iyz = permute( Ilist(:, 6), [3 2 1]);
+    
+    I = [Ixx Ixy Ixz;
+         Ixy Iyy Iyz;
+         Ixz Iyz Izz];
+     
+end
+
+
+function R = rot(angle, axis)
+    % ROT Generates a rotation matrix along a principle coordinate.
+    % Angle is in radians. Axis is 1 for x, 2 for y, 3 for z.
+    %
+    % R = utils.rot(theta, axis) returns the 3x3 rotation matrix for a
+    % theta radian rotation about axis.
+    %
+    % See also utils.rotx, utils.roty, utils.rotz
+    
+    c = permute(cos(angle(:)), [2 3 1]);
+    s = permute(sin(angle(:)), [2 3 1]);
+    N = numel(s);
+    z = zeros(1,1,N);
+    o = ones(1,1,N);
+
+    switch axis
+        case 1
+            R = [o z z;
+                 z c -s;
+                 z s c];
+        case 2
+            R = [c z s;
+                 z o z;
+                 -s z c];
+        case 3
+            R = [c -s z;
+                 s c z;
+                 z z o];
+        otherwise
+            error("Axis must be 1-3 (for x, y and z)");
+    end
+    
 end
