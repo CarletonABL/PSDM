@@ -1,6 +1,6 @@
-%% Two-Link Planar Manipulator PSDM Example
+%% SCARA Manipulator PSDM Example
 % This example shows how PSDM can be used to derive the regressor for of the 
-% dynamics of motion of a simple two-link planar manipulator.
+% dynamics of motion of a s SCARA manipulator
 % 
 % 
 %% Derivation
@@ -20,23 +20,30 @@
 % Link twist: alpha_i
 % Link offset: di + t_i s_i q_i
 % Link angle: theta_i + (1-t_i) s_i q_i
+% 
+% For the current robot, with link lengths 0.25, 0.3 and 0.15 m, we have the 
+% DH table:
 
-DH = [2.1   0	0     0   0   1;
-      1.1   0	0     0   0   1];
+DH = [0.25,     0,      0.3,    0,    0,    1;
+      0.15,     pi,     0,      0,    0,    1;
+      0,        0,      0,      0,    1,    1;
+      0,        0,      0,      0,    0,    1];
   
 %% 
 % We also need a gravity vector. This is a unit vector and is scaled by the 
 % gravitational constant internally. Here, gravity is pointing in the negative 
 % y direction.
 
-g = [0; 1; 0];
+g = [0; 0; 1];
 
 %% 
 % Finally, we (optionally) need to define a vector of inertial parameters of 
 % the robot, X. This is *not* needed to run the derivation. But, it can be used 
 % to specify certain parameters as being zero. Internally, any parameter which 
-% is identically zero in the given X matrix is assumed negligible and is not 
+% is identically zero in the given $X$ matrix is assumed negligible and is not 
 % included in the derivation, leading to simpler results.
+% 
+% X is defined as the concatenation of all the inertial parameters:
 % 
 % X is defined as the concatenation of all the inertial parameters:
 % 
@@ -44,12 +51,11 @@ g = [0; 1; 0];
 %             :     :      :      :       :     :      :      :     :       :
 %           [m_n  rcx_n  rcy_n  rcz_n  Ixx_n  Iyy_n  Izz_n  Ixy_n  Ixz_n  Iyz_n];
 % 
-% Here, we assume the center of gravities are inline with the linkages, and 
-% that all but the I_zz component of the inertias are negligible.
+% Here, we we make no assumptions about any of the parameters, so we can either 
+% set X to be a $n\times 10$ matrix of ones, or just give leave it empty.
 
-X = [1 -1 0 0 0 0 0.5 0 0 0;
-     2 -1 0 0 0 0 0.3 0 0 0];
- 
+X = [];
+
 %% 
 % We can also specify the tolerance (default is 1e-11) and verbosity (default 
 % is true).
@@ -61,34 +67,33 @@ verbosity = true;
 % Now, we can run the derivation
 
 [E, P] = PSDM.deriveModel(DH, g, X, tolerance, verbosity);
-
 %% 
-% E is the exponent matrix which represents the terms of the final result. P 
-% is a page array of the two reduction matrices for each joint. Because this is 
-% a simple example, we can inspect them:
-
-disp(E)
-disp(P)
+% E is the exponent matrix which represents the terms of the final result. These 
+% matrices can be inspected in matlab, however they are a bit large to intuite 
+% visually.
 
 %% Testing
 % The PSDM model, defined by E and P, can be used either through full knowledge 
-% of X, the inertial parameters, or through experimental determination of the 
-% Theta regression parameters.
+% of $X$, the inertial parameters, or through experimental determination of the 
+% $\Theta$ regression parameters.
 % 
 % Here, since we do not have experimental data, we can just use the $X$ parameters 
 % above to validate the result. Note, this validation has actually already been 
-% performed in the derivation above - this is just to illustrate.
+% performed in the derivation above ? this is just to illustrate.
 % 
 % First, use the X2Theta function to convert the X matrix into the appropriate 
-% regression vector.
+% regression vector. We assume some arbitrary list of inertial parameters, simulated 
+% by a rand function.
 
+DOF = size(DH, 1);
+X = rand(DOF, 10)*2-1;
 Theta = PSDM.X2Theta(DH, X, g, E, P);
 
 %% 
 % Now, define some random poses.
 
 N = 5;
-DOF = 2;
+
 Q = (rand(DOF, N)-0.5) * (2*pi);
 Qd = (rand(DOF, N)-0.5);
 Qdd = (rand(DOF, N)-0.5);
@@ -121,13 +126,13 @@ fprintf('Max forward dynamics error: %.5g\n', max(abs(Qdd_psdm - Qdd), [], 'all'
 % 
 % However, because the model is quite nicely organized in E and P, we can procedurally 
 % create matlab functions which are much faster than the default functions, specifically 
-% for a given {E, P, \Theta} tuple.
+% for a given $\{E, P, \Theta\}$ tuple.
 % 
 % Add the temp directory and define some filenames for the functions:
 
 addpath(fullfile(utilities.PSDMDir, 'temp'));
-filename_inverse = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_twolink.m');
-filename_forward = fullfile( utilities.PSDMDir, 'temp', 'PSDM_forwardDynamics_twolink.m');
+filename_inverse = fullfile( utilities.PSDMDir, 'temp', 'PSDM_inverseDynamics_scara.m');
+filename_forward = fullfile( utilities.PSDMDir, 'temp', 'PSDM_forwardDynamics_scara.m');
 
 %% 
 % Can decide if you want to mex-compile your code or not, as well as whether 
@@ -151,7 +156,6 @@ PSDM.makeForwardDynamics(filename_forward, E, P, Theta, ...
 
 % Generate samples
 N = 10e5;
-DOF = 2;
 Q = (rand(DOF, N)-0.5) * (2*pi);
 Qd = (rand(DOF, N)-0.5) * (10);
 Qdd = (rand(DOF, N)-0.5) * (50);
@@ -164,9 +168,9 @@ fprintf("Default inverse dynamics function took %.3g seconds per state.\n", t1/N
 
 % Run test. We run the function once first since matlab doesn't run
 % functions very quickly the first time.
-A = PSDM_forwardDynamics_twolink_mex(Q(:, 1), Qd(:, 1), Qdd(:, 1));
+A = PSDM_forwardDynamics_scara_mex(Q(:, 1), Qd(:, 1), Qdd(:, 1));
 tic2 = tic;
-tau_psdm_opt = PSDM_inverseDynamics_twolink_mex(Q, Qd, Qdd);
+tau_psdm_opt = PSDM_inverseDynamics_scara_mex(Q, Qd, Qdd);
 t2 = toc(tic2);
 
 fprintf("Optimized inverse dynamics function took %.3g seconds per state.\n", t2/N);
@@ -181,9 +185,9 @@ fprintf("Default forward dynamics function took %.3g seconds per state.\n", t3/N
 
 % Run test. We run the function once first since matlab doesn't run
 % functions very quickly the first time.
-A = PSDM_forwardDynamics_twolink_mex(Q(:, 1), Qd(:, 1), tau_psdm(:, 1));
+A = PSDM_forwardDynamics_scara_mex(Q(:, 1), Qd(:, 1), tau_psdm(:, 1));
 tic4 = tic;
-Qdd_psdm_opt = PSDM_forwardDynamics_twolink_mex(Q, Qd, tau_psdm);
+Qdd_psdm_opt = PSDM_forwardDynamics_scara_mex(Q, Qd, tau_psdm);
 t4 = toc(tic4);
 
 fprintf("Optimized forward dynamics function took %.3g seconds per state.\n", t4/N);

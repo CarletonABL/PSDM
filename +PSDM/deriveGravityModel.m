@@ -54,7 +54,8 @@ function [Ep_grav, P_grav] = deriveGravityModel(DH_ext, g_in, X_in, tol_in, v_in
     
     % Parse X
     if nargin < 3 || isempty(X_in)
-        X = ones(DOF, 10);
+        % Use a perterbed random set
+        X = ones(DOF, 10) + rand(DOF, 10);
     else
         X = X_in;
     end

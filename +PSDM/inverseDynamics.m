@@ -36,8 +36,9 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
          try
             tau = PSDM.inverseDynamics_mex(E, P, Theta, Q, Qd, Qdd);
             return; 
-         catch
+         catch e
              warning("PSDM is not compiled! This code will run slowly without compilation. Recommend running PSDM.make");
+             disp(e)
          end
     end
     

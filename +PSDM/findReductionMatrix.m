@@ -38,6 +38,12 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
         v = v_in;
     end
     
+    % Exit out if empty E matrix is given.
+    if size(Ep, 2) == 0
+        P = P1;
+        return;
+    end
+    
     %% Start function
     t = tic;
     

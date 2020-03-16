@@ -6,6 +6,14 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     
     %% Preamble
     
+    if size(E, 2) == 0
+        
+        % Cancel out if empty matrix
+        Yp = zeros(size(E));
+        return;
+        
+    end
+    
     % Run mex, if possible
     c = PSDM.config;
     if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex
