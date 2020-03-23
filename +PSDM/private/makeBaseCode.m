@@ -7,18 +7,26 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
     
     %% Make a list of upsilon vectors from input
     % Need to fix this for the updated upsilon format
-    lcode1 = sprintf('g%d_1 = gi(:, %d);\n', repelem(1:DOF, 2));
-    lcode2 = sprintf('g%d_2 = gi(:, %d).^2;\n', repelem(1:DOF, 2));
-    scode1 = sprintf('g%d_1 = gi(:, %d);\n', repelem(1:DOF, 2)+DOF);
-    ccode1 = sprintf('g%d_1 = gi(:, %d);\n', repelem(1:DOF, 2)+2*DOF);
-    ccode2 = sprintf('g%d_2 = gi(:, %d).^2;\n', repelem(1:DOF, 2)+2*DOF);
-    acode1 = sprintf('a%d_1 = ai(:, %d);\n', repelem(1:(2*DOF), 2));
-    acode2 = sprintf('a%d_2 = ai(:, %d).^2;\n', repelem((1:DOF), 2));
+%     lcode1 = sprintf('g_1(%d) = gi(:, %d);\n', repelem(1:DOF, 2));
+%     lcode2 = sprintf('g_2(%d) = gi(:, %d).^2;\n', repelem(1:DOF, 2));
+%     scode1 = sprintf('g_1(%d) = gi(:, %d);\n', repelem(1:DOF, 2)+DOF);
+%     ccode1 = sprintf('g_1(%d) = gi(:, %d);\n', repelem(1:DOF, 2)+2*DOF);
+%     ccode2 = sprintf('g_2(%d) = gi(:, %d).^2;\n', repelem(1:DOF, 2)+2*DOF);
+%     acode1 = sprintf('a_1(%d) = ai(:, %d);\n', repelem(1:(2*DOF), 2));
+%     acode2 = sprintf('a_2(%d) = ai(:, %d).^2;\n', repelem((1:DOF), 2));
     
-    Zvarnames{1} = split(sprintf('g%d_1,', (1:(3*DOF))), ",");
-    Zvarnames{2} = split(sprintf('g%d_2,', (1:(3*DOF))), ",");
-    Avarnames{1} = split(sprintf('a%d_1,', (1:(2*DOF))), ",");
-    Avarnames{2} = split(sprintf('a%d_2,', (1:(2*DOF))), ",");
+    lcode1 = sprintf('g_1 = gi;\n');
+    lcode2 = sprintf('g_2 = gi.^2;\n');
+    scode1 = '';
+    ccode1 = '';
+    ccode2 = '';
+    acode1 = sprintf('a_1 = ai;\n');
+    acode2 = sprintf('a_2 = ai.^2;\n');
+    
+    Zvarnames{1} = split(sprintf('g_1(%d),', (1:(3*DOF))), ",");
+    Zvarnames{2} = split(sprintf('g_2(%d),', (1:(3*DOF))), ",");
+    Avarnames{1} = split(sprintf('a_1(%d),', (1:(2*DOF))), ",");
+    Avarnames{2} = split(sprintf('a_2(%d),', (1:(2*DOF))), ",");
     
     Up = E(1:(3*DOF), :);
     Up1 = unique(Up', 'rows')';
@@ -34,6 +42,9 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
     %% Build up code for upsilon elements
     Up1codes = repelem({''}, M1);
     Up1names = repelem({''}, M1);
+    
+    Up1code = sprintf('Up = coder.nullcopy(ones(%d, 1));\n', M1);
+    
     for i = 1:M1
         str = repelem({''}, 2*DOF);
         for j = 1:size(Up, 1)
@@ -42,18 +53,21 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
             end
         end
         
-        Up1names{i} = sprintf('Up%d', i);
+        Up1names{i} = sprintf('Up(%d)', i);
         if any(Up1(:, i) > 0)
-            Up1codes{i} = sprintf('Up%d = %s;', i, strjoin(str(Up1(:, i)>0), ".*"));
+            Up1codes{i} = sprintf('Up(%d) = %s;', i, strjoin(str(Up1(:, i)>0), ".*"));
         else
-            Up1codes{i} = sprintf('Up%d = 1;', i);
+            %Up1codes{i} = sprintf('Up(%d = 1;', i);
         end
     end
-    Up1code = strjoin(Up1codes, '\n');
+    Up1code = strcat(Up1code, strjoin(Up1codes, '\n'));
     
     %% Build up code for acceleration elements
     A1codes = repelem({''}, Ma);
     A1names = repelem({''}, Ma);
+    
+    A1code = sprintf('A = coder.nullcopy(ones(%d, 1));\n', Ma);
+    
     for i = 1:Ma
         str = repelem({''}, 2*DOF);
         for j = 1:(2*DOF)
@@ -62,13 +76,13 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
             end
         end
         
-        A1names{i} = sprintf('A%d', i);
+        A1names{i} = sprintf('A(%d)', i);
         if any(A1(:, i) > 0)
-            A1codes{i} = sprintf('A%d = %s;', i, strjoin(str(A1(:, i)>0), ".*"));
+            A1codes{i} = sprintf('A(%d) = %s;', i, strjoin(str(A1(:, i)>0), ".*"));
         else
-            A1codes{i} = sprintf('A%d = 1;', i);
+            %A1codes{i} = sprintf('A%d = 1;', i);
         end
     end
-    A1code = strjoin(A1codes, '\n');
+    A1code = strcat(A1code, strjoin(A1codes, '\n'));
     
 end
