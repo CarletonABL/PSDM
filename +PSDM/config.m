@@ -3,5 +3,6 @@ function c = config
 
     c.allow_mex = false;
     c.allow_mex_rne = true;
+    c.use_iterative_refinement = true;
     
 end

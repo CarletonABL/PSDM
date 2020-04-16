@@ -91,22 +91,25 @@ end
 function C = doRegression(A, B)
     % Does the regression C = A\B, but for large matrices (>1000) does it
     % in steps to speed it up.
-    
+        
     % Get size
-    [N, ~] = size(A);
-    
+    [N, M] = size(A);
+        
     if N < 800
         % Just do regression directly, its fast
         
-        C = A\B;
+        C = linsolve(A, B);
         return;
         
     else
         % Matrix is large. Do regression in steps.
         % First, do regression with A a square matrix, but use a lower
         % tolerance.
-        tol = 1e-9;
-        C = A(1:N, :) \ B(1:N, :);
+        tol = 1e-11;
+        
+       
+        C = linsolve(A(1:M, :), B(1:M, :));
+        
         mask = any( abs(C) > tol, 2);
         
         % eliminate uncorrelated terms
@@ -116,7 +119,8 @@ function C = doRegression(A, B)
         % terms.
         N2 = sum(mask);
         M2 = round(N2*1.2);
-        C(mask, :) = A(1:M2, mask) \ B(1:M2, :);
+        
+        C(mask, :) = linsolve(A(1:M2, mask), B(1:M2, :));
         
         return;
     end

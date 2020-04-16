@@ -80,8 +80,11 @@ function [Ep_grav, P_grav] = deriveGravityModel(DH_ext, g_in, X_in, tol_in, v_in
         try
             [Ep_grav, P_grav] = PSDM.deriveGravityModel_mex(DH_ext, g, X, tol, v);
             return; 
-        catch
+        catch e
             warning("PSDM is not compiled! PSDM.deriveGravityModel will run slowly without compilation. Recommend running PSDM.make");
+            disp(e);
+            e.stack.name
+            e.stack.line
         end
     end
     

@@ -41,6 +41,26 @@ function make
     codegen -config cfg -I path +utilities/rref -args ARGS{1}
     fprintf("Done!\n");
     
+    %% Compile residual3p function
+
+    fprintf("Compiling utilities.residual3p into mex file... ");
+    cfg = coder.config('mex');
+    cfg.GenerateReport = true;
+    cfg.ReportPotentialDifferences = false;
+
+    % Define argument types for entry-point 'blockprod_private'.
+    ARGS = cell(1,1);
+    ARGS{1} = cell(3,1);
+    ARGS{1}{1} = coder.typeof(0,[Inf Inf],[1 1]); % A
+    ARGS{1}{2} = coder.typeof(0,[Inf Inf],[1 1]); % x
+    ARGS{1}{3} = coder.typeof(0,[Inf Inf],[1 1]); % b
+
+    % Invoke MATLAB Coder.
+    cd(fullfile(path, '+utilities'));
+
+    codegen -config cfg -I path +utilities/residual3p -args ARGS{1}
+    fprintf("Done!\n");
+            
     %% Cleanup
     
     fprintf("Done code generation for utilities package.\n");

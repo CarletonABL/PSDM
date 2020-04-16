@@ -70,10 +70,14 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Find theta vector for each DOF of matrix
     % This function just runs the argument function in a loop, but will do
     % it in parallel if the computer supports it.
-    Ti = utilities.iparfor( ...
-            @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
-            DOF, ...
-            [M, Nt]);
+%     Ti = utilities.iparfor( ...
+%             @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
+%             DOF, ...
+%             [M, Nt], false);
+    Ti = coder.nullcopy(zeros( M, Nt, DOF ));
+    for i = 1:DOF
+        Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol);
+    end
     
     % Stack T vectors vertically
     T = utilities.vertStack(Ti, 3);
@@ -160,7 +164,7 @@ function T = doRegression(Y, tau, tol)
 
     T = zeros(size(Y, 2),  size(tau, 2));
     nonzero_mask = any( abs( Y ) > tol , 1 );
-    
-    T(nonzero_mask, : ) = Y(:, nonzero_mask) \ tau;
+        
+    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau );
     
 end

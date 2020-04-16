@@ -18,6 +18,6 @@ function Theta = X2Theta(DH_ext, X, g, E, P, Ntests)
     % Stack DOF of robot along regression dimension, then solve for theta
     Yb_stack = utilities.vertStack(Yb);
     tau_stack = utilities.vertStack(tau, 2);
-    Theta = Yb_stack \ tau_stack;
+    Theta = utilities.mldivide2(Yb_stack, tau_stack);
     
 end
