@@ -105,7 +105,7 @@ function C = doRegression(A, B)
         % Matrix is large. Do regression in steps.
         % First, do regression with A a square matrix, but use a lower
         % tolerance.
-        tol = 1e-11;
+        tol = 1e-9;
         
        
         C = linsolve(A(1:M, :), B(1:M, :));

@@ -12,7 +12,7 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
         idType = 'all';
     end
     if nargin < 7 || isempty(tol)
-        tol = 1e-14;
+        tol = 1e-12;
     end
     if nargin < 8 || isempty(v)
         v = true;
@@ -37,7 +37,7 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     E = zeros(5*DOF, n, 'uint8');
     n = 0; m = 0;
     for i = 1:N
-        [ni,mi,~] = size(Pi{i});
+        [ni, mi, ~] = size(Pi{i});
         P_combined( (n+1):(n+ni), (m+1):(m+mi), : ) = Pi{i};
         E( :, (n+1):(n+ni) ) = Ei{i};
         n = n + ni;
@@ -48,6 +48,6 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     P = PSDM.findReductionMatrix(DH_ext, X, g, E, idType, P_combined, tol, v);
     
     % Round away numerical errors
-    P( abs(P) < 1e-14 ) = 0;
+    % P( abs(P) < 1e-14 ) = 0;
     
 end

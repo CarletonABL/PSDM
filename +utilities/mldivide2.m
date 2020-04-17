@@ -1,4 +1,4 @@
-function x = mldivide2(A, b, niter, useSymbolic, exitTolerance)
+function x = mldivide2(A, b, niter, useSymbolic, exitTolerance, decompose)
     % MLDIVIDE2 Computes the least squares solution to A\b, however it
     % "recovers" the final digits of the computation using iteration with
     % newton's method and triple-precision residual calculations.
@@ -29,14 +29,21 @@ function x = mldivide2(A, b, niter, useSymbolic, exitTolerance)
     if nargin < 5 || isempty(exitTolerance)
         exitTolerance = eps(class(A));
     end
+    if nargin < 6 || isempty(decompose)
+        decompose = true;
+    end
             
     tol2 = exitTolerance^2;
     
     % Decompose A
-    [L, U, P] = lu(A);
-    
-    % Get standard solution using LUP triangle solving.
-    x = U\(L\(P*b));
+    if decompose
+        [L, U, P] = lu(A);
+
+        % Get standard solution using LUP triangle solving.
+        x = U\(L\(P*b));
+    else
+        x = A\b;
+    end
     
     norm_d_prev = inf(1, size(b, 2));
     
@@ -50,7 +57,11 @@ function x = mldivide2(A, b, niter, useSymbolic, exitTolerance)
         end
         
         % Get correction from LU decomposition
-        d = U\(L\(P*r));
+        if decompose
+            d = U\(L\(P*r));
+        else
+            d = A\r;
+        end
         
         % Make correction
         x = x - d;

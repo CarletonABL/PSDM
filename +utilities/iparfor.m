@@ -33,7 +33,7 @@ function res = iparfor( func, N, sz, specifySize )
     
     if utils.autoPar
         parfor i = 1:N
-            res_i = func(i);
+            res_i = feval(func, i);
             if specifySize
                 coder.varsize('res_i', sz, [1 1]);
             else
@@ -43,7 +43,7 @@ function res = iparfor( func, N, sz, specifySize )
         end
     else
         for i = 1:N
-            res_i = func(i);
+            res_i = feval(func, i);
             coder.varsize('res_i', [inf inf], [1 1]);
             res(:, :, i) = res_i;
         end

@@ -16,20 +16,25 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
         idType = idType_in;
     end
     
-    % Fill in P1, also check size
-    if nargin < 6 || isempty(P1_in)
-        P1 = repmat(eye(size(Ep, 2)), [1 1 DOF]);
-    else
-        P1 = P1_in;
-    end
-    assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
-
     % Parse tolerance
     if nargin < 7 || isempty(tol_in)
-        tol = 1e-14;
+        tol = 1e-12;
     else
         tol = tol_in;
     end
+    
+    % Fill in P1, also check size
+    if nargin < 6 || isempty(P1_in)
+        P1 = repmat(eye(size(Ep, 2)), [1 1 DOF]);
+        beCareful = false;
+    else
+        P1 = P1_in;
+        m = size(Ep, 2);
+        beCareful = ~all(size(P1) == [m, m, DOF]) || ...
+            utils.eqtol(P1, repmat(eye(m), [1 1 DOF]), tol, true);
+    end
+    assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
+
     
     % Parse verbosity
     if nargin < 8 || isempty(v_in)
@@ -55,7 +60,8 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     
     % Number of joint states to test at. Use a number greater than
     % required to reduce error
-    Nq = max(round(M * 2), DOF*10*2);
+    % Nq = max(round(M * 2), DOF*10*2);
+    Nq = max(round(M*(1.2 + beCareful)), DOF*10*2);
     
     % Max number of inertial parameters is DOF*10
     Nt = round(DOF * 10); 
@@ -70,18 +76,35 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Find theta vector for each DOF of matrix
     % This function just runs the argument function in a loop, but will do
     % it in parallel if the computer supports it.
-%     Ti = utilities.iparfor( ...
-%             @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
-%             DOF, ...
-%             [M, Nt], false);
-    Ti = coder.nullcopy(zeros( M, Nt, DOF ));
-    for i = 1:DOF
-        Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol);
+    %     Ti = utilities.iparfor( ...
+    %             @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
+    %             DOF, ...
+    %             [M, Nt], false);
+    
+    Ytile = tileArray(Yi, DOF);
+    tau_stack = permute( ...
+                    utilities.vertStack(tau, 2), ...
+                    [1 3 2]);
+    
+    if ~beCareful
+        % If not in "careful" mode, we can just solve these linear
+        % equations separately for each DOF. This is much faster and isn't
+        % necessary when P1 ~= eye.
+        
+        Ti = coder.nullcopy(zeros( M, Nt, DOF ));
+        for i = 1:DOF
+            Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol, beCareful);
+        end
+        % Stack T vectors vertically
+        T = utilities.vertStack(Ti, 3);
+        
+    else
+        % Need to regress everything togehter
+        
+        T = doRegression(Ytile, tau_stack, tol, beCareful);
+        
     end
     
-    % Stack T vectors vertically
-    T = utilities.vertStack(Ti, 3);
-
     % Round out any columns smaller than a tolerance
     T(:, all(abs(T) < tol, 1)) = 0;
     
@@ -108,10 +131,10 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     %% Double check reprojection error to make sure no errors occured
     
     % Y tile is Y for each joint
-    Ytile = tileArray(Yi, DOF);
-    tau_stack = permute( ...
-                    utilities.vertStack(tau, 2), ...
-                    [1 3 2]);
+    % Ytile = tileArray(Yi, DOF);
+    % tau_stack = permute( ...
+    %                 utilities.vertStack(tau, 2), ...
+    %                 [1 3 2]);
     
     % Transform with P reduction matrices.
     Ymin = Ytile * P_stack;
@@ -154,17 +177,18 @@ function B = tileArray(A, N)
 end
 
 
-function T = doRegression(Y, tau, tol)
+function T = doRegression(Y, tau, tol, beCareful)
     % Performs the regression Y\tau, but removes any "zero" columns from Y
     % first, which prevents ill-defined results.
 
     if nargin < 3 || isempty(tol)
         tol = 1e-11;
     end
-
+    
     T = zeros(size(Y, 2),  size(tau, 2));
     nonzero_mask = any( abs( Y ) > tol , 1 );
         
-    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau );
-    
+    if coder.target('matlab'); warnStruct = warning('off', 'MATLAB:rankDeficientMatrix'); end
+    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau, ~beCareful );
+    if coder.target('matlab'); warning(warnStruct); end
 end

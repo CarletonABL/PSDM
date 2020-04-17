@@ -43,7 +43,7 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
     Up1codes = repelem({''}, M1);
     Up1names = repelem({''}, M1);
     
-    Up1code = sprintf('Up = coder.nullcopy(ones(%d, 1));\n', M1);
+    Up1code = sprintf('Up = coder.nullcopy(ones(%d, 1));\n\n', M1);
     
     for i = 1:M1
         str = repelem({''}, 2*DOF);
@@ -57,7 +57,7 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
         if any(Up1(:, i) > 0)
             Up1codes{i} = sprintf('Up(%d) = %s;', i, strjoin(str(Up1(:, i)>0), ".*"));
         else
-            %Up1codes{i} = sprintf('Up(%d = 1;', i);
+            Up1codes{i} = sprintf('Up(%d) = 1;', i);
         end
     end
     Up1code = strcat(Up1code, strjoin(Up1codes, '\n'));
@@ -66,7 +66,7 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
     A1codes = repelem({''}, Ma);
     A1names = repelem({''}, Ma);
     
-    A1code = sprintf('A = coder.nullcopy(ones(%d, 1));\n', Ma);
+    A1code = sprintf('A = coder.nullcopy(ones(%d, 1));\n\n', Ma);
     
     for i = 1:Ma
         str = repelem({''}, 2*DOF);
@@ -80,7 +80,7 @@ function [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode
         if any(A1(:, i) > 0)
             A1codes{i} = sprintf('A(%d) = %s;', i, strjoin(str(A1(:, i)>0), ".*"));
         else
-            %A1codes{i} = sprintf('A%d = 1;', i);
+            A1codes{i} = sprintf('A(%d) = 1;', i);
         end
     end
     A1code = strcat(A1code, strjoin(A1codes, '\n'));
