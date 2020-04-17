@@ -61,7 +61,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Number of joint states to test at. Use a number greater than
     % required to reduce error
     % Nq = max(round(M * 2), DOF*10*2);
-    Nq = max(round(M*(1.2 + beCareful)), DOF*10*2);
+    Nq = max(round(M*(1.2 + 2*beCareful)), DOF*10*2);
     
     % Max number of inertial parameters is DOF*10
     Nt = round(DOF * 10); 
@@ -74,36 +74,19 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     Yi = utilities.blockprod(Y, P1);
     
     % Find theta vector for each DOF of matrix
-    % This function just runs the argument function in a loop, but will do
-    % it in parallel if the computer supports it.
-    %     Ti = utilities.iparfor( ...
-    %             @(i) doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol), ...
-    %             DOF, ...
-    %             [M, Nt], false);
-    
     Ytile = tileArray(Yi, DOF);
     tau_stack = permute( ...
                     utilities.vertStack(tau, 2), ...
                     [1 3 2]);
     
-    if ~beCareful
-        % If not in "careful" mode, we can just solve these linear
-        % equations separately for each DOF. This is much faster and isn't
-        % necessary when P1 ~= eye.
-        
-        Ti = coder.nullcopy(zeros( M, Nt, DOF ));
-        for i = 1:DOF
-            Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol, beCareful);
-        end
-        % Stack T vectors vertically
-        T = utilities.vertStack(Ti, 3);
-        
-    else
-        % Need to regress everything togehter
-        
-        T = doRegression(Ytile, tau_stack, tol, beCareful);
-        
+    % Solve each regression problem in a loop
+    Ti = coder.nullcopy(zeros( M, Nt, DOF ));
+    for i = 1:DOF
+        Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol);
     end
+    
+    % Stack T vectors vertically
+    T = utilities.vertStack(Ti, 3);
     
     % Round out any columns smaller than a tolerance
     T(:, all(abs(T) < tol, 1)) = 0;
@@ -129,13 +112,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     P = utilities.blockprod(P1, P2);
 
     %% Double check reprojection error to make sure no errors occured
-    
-    % Y tile is Y for each joint
-    % Ytile = tileArray(Yi, DOF);
-    % tau_stack = permute( ...
-    %                 utilities.vertStack(tau, 2), ...
-    %                 [1 3 2]);
-    
+        
     % Transform with P reduction matrices.
     Ymin = Ytile * P_stack;
     Tmin = P_stack_inv * T;
@@ -177,7 +154,7 @@ function B = tileArray(A, N)
 end
 
 
-function T = doRegression(Y, tau, tol, beCareful)
+function T = doRegression(Y, tau, tol)
     % Performs the regression Y\tau, but removes any "zero" columns from Y
     % first, which prevents ill-defined results.
 
@@ -188,7 +165,6 @@ function T = doRegression(Y, tau, tol, beCareful)
     T = zeros(size(Y, 2),  size(tau, 2));
     nonzero_mask = any( abs( Y ) > tol , 1 );
         
-    if coder.target('matlab'); warnStruct = warning('off', 'MATLAB:rankDeficientMatrix'); end
-    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau, ~beCareful );
-    if coder.target('matlab'); warning(warnStruct); end
+    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau );
+
 end
