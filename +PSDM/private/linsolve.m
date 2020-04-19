@@ -3,7 +3,7 @@ function x = linsolve(A, b)
     % c.use_iterative_refinement = false, otherwise uses
     % utilities.mldivide2 and gets higher accuracy (runs slower though).
         
-    coder.extrinsic('utils.mldivide2');
+    coder.extrinsic('utilities.mldivide2');
 
     c = PSDM.config;
     if ~c.use_iterative_refinement

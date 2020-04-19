@@ -117,14 +117,17 @@ function [Q, Qd, Qdd] = generateSamplesAccel(DOF, Nq, joints)
 
     % Different joint accels depending on if we are isolating joints or
     % not
+    s = 1;
     if ~isempty(joints)
 
         Qdd = zeros(size(Q));
-        Qdd(joints, :) = (rand(numel(joints), Nq) * 2 - 1) * pi * 1;
+        Qdd(joints, :) = (rand(numel(joints), Nq) * s - s/2);
+        Qdd = sign(Qdd) .* (abs(Qdd) + s/10);
 
     else
-
-        Qdd = (rand(DOF, Nq) * 2 - 1) * pi * 1;
+        
+        Qdd = rand(DOF, Nq) * s - s/2;
+        Qdd = sign(Qdd) .* (abs(Qdd) + s/10);
 
     end
         
@@ -139,14 +142,18 @@ function [Q, Qd, Qdd] = generateSampleVelocity(DOF, Nq, joints)
 
     % Different joint accels depending on if we are isolating joints or
     % not
+    s = 1;
     if ~isempty(joints)
 
         Qd = zeros(size(Q));
-        Qd(joints, :) = (rand(numel(joints), Nq) * 2 - 1) * pi * 5;
-
+        
+        Qd(joints, :) = (rand(numel(joints), Nq) * s - s/2);
+        Qd = sign(Qd) .* (abs(Qd) + s/10);
+        
     else
 
-        Qd = (rand(DOF, Nq) * 2 - 1) * pi * 5;
+        Qd = rand(DOF, Nq) * s - s/2;
+        Qd = sign(Qd) .* (abs(Qd) + s/10);
 
     end
 
@@ -159,8 +166,11 @@ function [Q, Qd, Qdd] = generateSampleAll(DOF, Nq)
         
         % Just random joints. No gravity comp
         Q = generateRandomPose(DOF, Nq);
-        Qd = (rand(DOF, Nq) * 2 - 1)*pi;
-        Qdd = (rand(DOF, Nq) * 2 - 1)*pi;
+        s = 1;
+        Qd = rand(DOF, Nq) * s - s/2;
+        Qd = sign(Qd) .* (abs(Qd) + s/10);
+        Qdd = rand(DOF, Nq) * s - s/2;
+        Qdd = sign(Qdd) .* (abs(Qdd) + s/10);
 
 end
 
@@ -216,6 +226,7 @@ function Xlist = getRobotInertiaProps(X, Nt)
         Xlist = X;% .* ((rand(DOF, 10)-.5)*.1 + 1);
         
     else
+        
         % Make Nt random properties
         Xlist = rand(DOF, 10, Nt);
         

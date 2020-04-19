@@ -49,7 +49,7 @@ function [E, P] = deriveModel(DH_ext, g_in, X_in, tol_in, v_in)
     % Parse X
     if nargin < 3 || isempty(X_in)
         % Use a perterbed random set
-        X = ones(DOF, 10) + rand(DOF, 10);
+        X = ones(DOF, 10) + rand(DOF, 10)*0.2 - 0.1;
     else
         X = X_in;
     end
@@ -109,6 +109,8 @@ function [E, P] = deriveModel(DH_ext, g_in, X_in, tol_in, v_in)
             {E_grav, E_accel, E_vel}, ...
             {P_grav, P_accel, P_vel}, ...
             'all', tol*100, v);
+        
+    P = PSDM.simplifyReductionMatrix(P);
     
     % Output information, if required.
     utilities.vprint(v, "\nRobot matching done. Took %.3g s total.\n", toc(t));

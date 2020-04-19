@@ -37,7 +37,7 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     end
     
     %% Otherwise, do function normally
-    
+    doGravity = true;
     DOF = size(Q, 1);
     
     % Permute joint angles into 3rd dimension
@@ -69,5 +69,10 @@ function Yp = generateYp(Q, Qd, Qdd, E)
                 @(m) permute( prod( gamma_exp_trim( Eexp_trim(:, m), 1, : ), 1 ), [3 1 2]), ...
                 M, [N, 1], false), ...
             [1 3 2]);
+    
+    if doGravity
+        gravMask = ~any( E(3*DOF + (1:(2*DOF)), :) > 0, 1);
+        Yp(:, gravMask) = Yp(:, gravMask) * utils.g;
+    end
     
 end

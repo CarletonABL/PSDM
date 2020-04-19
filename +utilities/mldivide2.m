@@ -1,4 +1,4 @@
-function x = mldivide2(A, b, niter, useSymbolic, exitTolerance)
+function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
     % MLDIVIDE2 Computes the least squares solution to A\b, however it
     % "recovers" the final digits of the computation using iteration with
     % newton's method and triple-precision residual calculations.
@@ -68,6 +68,10 @@ function x = mldivide2(A, b, niter, useSymbolic, exitTolerance)
         % Store for future use
         norm_d_prev = norm_d;
         
+    end
+    
+    if nargout > 1
+        c = rcond(dA)^-1;
     end
 
 end

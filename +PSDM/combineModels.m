@@ -7,7 +7,17 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     % options are 'accel' or 'velocity'.
     
     %% Parse Inputs
-
+    
+    N = numel(Ei);
+    DOF = size(DH_ext, 1);
+    
+    % Check P
+    for i = 1:N
+        if nargin < 5 || numel(Pi) < i || isempty(Pi{i})
+            Pi{i} = repmat( eye( size(Ei{i}, 2) ), [1 1 DOF]);
+        end
+    end
+    
     if nargin < 6 || isempty(idType)
         idType = 'all';
     end
@@ -19,11 +29,7 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     end
 
     %% Function start
-    
-    % Define some variables
-    N = numel(Pi);
-    DOF = size(DH_ext, 1);
-    
+        
     % Get combined sizes
     n = 0; m = 0; 
     for i = 1:N
