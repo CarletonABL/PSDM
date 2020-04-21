@@ -1,4 +1,4 @@
-function Ym = getSetYm(DH_ext, type, Up_acc)
+function Ym = getSetYm(DH_ext, type, Up_acc_in)
     % GETSETYM Returns the full search space of projected acceleration
     % functions for a manipulator.
     %
@@ -25,7 +25,17 @@ function Ym = getSetYm(DH_ext, type, Up_acc)
     
     % Velocity upsilon can be calculated from acceration terms, if given,
     % or just from Up2.
-    if nargin > 2 && ~isempty(Up_acc)
+    if nargin > 2 && ~isempty(Up_acc_in)
+        
+        if iscell(Up_acc_in)
+            % Need to concatenate. Don't need to reduce since these
+            % functions are already unique and will be reduced later
+            % anyway.
+            Up_acc = horzcat(Up_acc_in{:});
+        else
+            Up_acc = Up_acc_in;
+        end
+        
         Up_vel = PSDM.getSetUpsilon_diff(Up_acc, DH_ext);
     else
         Up_vel = Up2;

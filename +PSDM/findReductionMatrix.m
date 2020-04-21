@@ -61,46 +61,40 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Number of joint states to test at. Use a number greater than
     % required to reduce error
     % Nq = max(round(M * 2), DOF*10*2);
-    Nq = max(round(M*(1.2 + 2*beCareful)), DOF*10*2);
+    Nq = max(round(M*(2 + 2*beCareful)), DOF*10*2);
     
     % Max number of inertial parameters is DOF*10
-    Nt = round(DOF * 10); 
+    % Nt = round(DOF * 100); 
+    Nt = round(DOF * 50);
     
     % Generate samples
-    [Q, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
+    [Q_stack, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
     
     % Make Y matrix, transform it with P1, if given
-    Y = PSDM.generateYp(Q, Qd, Qdd, Ep);
+    Y = PSDM.generateYp(Q_stack, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
-    
-    % Find theta vector for each DOF of matrix
-    Ytile = tileArray(Yi, DOF);
-    tau_stack = permute( ...
-                    utilities.vertStack(tau, 2), ...
-                    [1 3 2]);
     
     % Solve each regression problem in a loop
     Ti = coder.nullcopy(zeros( M, Nt, DOF ));
     for i = 1:DOF
-        Ti(:, :, i) = doRegression(Yi(:, :, i), squeeze(tau(:, i, :)), tol);
+        Ti(:, :, i) = linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
     end
     
     % Stack T vectors vertically
     T = utilities.vertStack(Ti, 3);
     
     % Round out any columns smaller than a tolerance
-    T(:, all(abs(T) < tol, 1)) = 0;
     
     % Reduce to minimum parameters. Since we stacked all Theta vectors
     % vertically, the result will be a vertical stacking of the P_inv
     % vectors.
-    P_stack_inv = utilities.rref(T', [], true);
+    Q_stack = utilities.rref(T', [], true);
     
     % The rank of the matrix
-    b = size(P_stack_inv, 1);
+    b = size(Q_stack, 1);
     
     % Get the pseudoinverse.
-    P_stack = pinv(P_stack_inv);
+    P_stack = pinv(Q_stack);
     
     % Un-stack the matrix in a loop
     P2 = zeros(M, b, DOF);
@@ -114,8 +108,14 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     %% Double check reprojection error to make sure no errors occured
         
     % Transform with P reduction matrices.
-    Ymin = Ytile * P_stack;
-    Tmin = P_stack_inv * T;
+    % Find theta vector for each DOF of matrix
+    %     Ytile = tileArray(Yi, DOF);
+    tau_stack = permute( ...
+                    utilities.vertStack(tau, 2), ...
+                    [1 3 2]);
+
+    Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
+    Tmin = Q_stack * T;
     
     % Find reprojection error
     r = Ymin*Tmin - tau_stack;
@@ -133,38 +133,4 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n\t\tReprojection error is %.3g\n", ...
         int32(size(P1, 1)), int32(M), int32(b), toc(t), max(abs(r), [], 'all'));
         
-end
-
-
-function B = tileArray(A, N)
-    % Takes an array a and repeats it along the diagonal n times.
-    % If A is a page array, then each tile is the appropriate lement of A
-    
-    [n, m, p] = size(A);
-    B = zeros( n*N, m*N );
-    
-    for i = 1:N
-        if p > 1
-            B( (1:n)+(i-1)*n, (1:m)+(i-1)*m ) = A(:, :, i);
-        else
-            B( (1:n)+(i-1)*n, (1:m)+(i-1)*m ) = A(:, :, 1);
-        end
-    end
-
-end
-
-
-function T = doRegression(Y, tau, tol)
-    % Performs the regression Y\tau, but removes any "zero" columns from Y
-    % first, which prevents ill-defined results.
-
-    if nargin < 3 || isempty(tol)
-        tol = 1e-11;
-    end
-    
-    T = zeros(size(Y, 2),  size(tau, 2));
-    nonzero_mask = any( abs( Y ) > tol , 1 );
-        
-    T(nonzero_mask, :) = linsolve( Y(:, nonzero_mask), tau );
-
 end

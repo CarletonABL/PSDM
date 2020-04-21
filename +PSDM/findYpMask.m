@@ -41,19 +41,19 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     time = tic;
     
     % Number of terms
-    Nterms = size(Em, 2);
+    m = size(Em, 2);
 
     % Determine number of tests to run. If a small number, use a larger
     % number than required to get a more accurate and better conditioned
     % matrix. If a very large number, don't do this to save time.
-    Ntestmult = 1.2;
-    if Nterms < 500
+    Ntestmult = 2;
+    if m < 500
         Ntestmult = 3;
     end
-    if Nterms > 5000
+    if m > 5000
         Ntestmult = 1;
     end
-    Ntests = round(Nterms*Ntestmult);
+    Ntests = round(m*Ntestmult);
 
     % Generate joint states
     [Q, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Ntests, 1, typeID);
@@ -62,7 +62,7 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     Y = PSDM.generateYp(Q, Qd, Qdd, Em);
 
     % Solve for each of the DOFs
-    theta = doRegression(Y, tau);
+    theta = doRegression(Y, tau, tol);
 
     % Solve for masks
     mask = any( abs(theta) > tol , 2)';
@@ -81,21 +81,22 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     
     % Output information, if required.
     utilities.vprint(v, "\t\t%d terms reduced to %d, Took %.2f seconds.\n\t\tMax Reprojection Error: %.3g.\n", ...
-        int32(Nterms), ...
+        int32(m), ...
         int32(sum(mask)), ...
         toc(time), ...
         max(abs(r), [], 'all'));
     
 end
 
-function C = doRegression(A, B)
+function C = doRegression(A, B, tol)
     % Does the regression C = A\B, but for large matrices (>1000) does it
     % in steps to speed it up.
         
     % Get size
-    [N, M] = size(A);
+    DOF = size(B, 2);
+    [n, m] = size(A);
         
-    if N < 800
+    if n < 800
         % Just do regression directly, its fast
         
         C = linsolve(A, B);
@@ -105,24 +106,34 @@ function C = doRegression(A, B)
         % Matrix is large. Do regression in steps.
         % First, do regression with A a square matrix, but use a lower
         % tolerance.
-        tol = 1e-9;
         
-       
-        C = linsolve(A(1:M, :), B(1:M, :));
-        
-        mask = any( abs(C) > tol, 2);
-        
-        % eliminate uncorrelated terms
-        C(~mask, :) = 0;
+        mask = ones(m, 1, 'logical');
+        for i = 1:2
+            N = sum(mask);
+            C = linsolve(A(1:N, mask), B(1:N, :));
+
+            % Find tolerance
+            Cmax = max(abs(C), [], 2);
+            Cmax_sort = sort(Cmax);
+            tol_i = min(Cmax_sort( round( N*0.66 ) ) + eps*10, tol/10);
+            mask(mask) = Cmax > tol_i;
+            
+            if tol_i == tol/10
+                break;
+            end
+            
+        end
         
         % Now, do a "well" conditioned least squared fit on the remaining
         % terms.
-        N2 = sum(mask);
-        M2 = round(N2*1.2);
+        N = round( min(sum(mask) * 2, n));
         
-        C(mask, :) = linsolve(A(1:M2, mask), B(1:M2, :));
+        C = zeros(m, DOF);
+        
+        C(mask, :) = linsolve(A(1:N, mask), B(1:N, :));
         
         return;
+        
     end
 
 end

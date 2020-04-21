@@ -96,21 +96,27 @@ function [E, P] = deriveModel(DH_ext, g_in, X_in, tol_in, v_in)
     [E_grav, P_grav] = PSDM.deriveGravityModel(DH_ext, g, X, tol, v);
 
     % Derive accel model
-    [E_accel, P_accel] = PSDM.deriveAccelModel(DH_ext, X, tol, v);
+    [Ei_accel, Pi_accel] = PSDM.deriveAccelModel(DH_ext, X, tol, v);
 
     % Derive velocity model
-    [E_vel, P_vel] = PSDM.deriveVelocityModel(DH_ext, X, E_accel, tol, v);
+    [Ei_vel, Pi_vel] = PSDM.deriveVelocityModel(DH_ext, X, Ei_accel, tol, v);
 
     % Output information, if required.
     utilities.vprint(v, "Running final combining of terms:\n");
     
     % Combine models into a single term
     [E, P] = PSDM.combineModels(DH_ext, X, g, ...
-            {E_grav, E_accel, E_vel}, ...
-            {P_grav, P_accel, P_vel}, ...
-            'all', tol*100, v);
+            [{E_grav}; Ei_accel; Ei_vel], ...
+            [{P_grav}; Pi_accel; Pi_vel], ...
+            'all', tol, v);
+    
+    % Simplify P matrices by normalizing each column by the value of the
+    % first nonzero value in P.
+    P = PSDM.simplifyReductionMatrix(P, tol);
         
-    P = PSDM.simplifyReductionMatrix(P);
+    % Simplify model to negligible precision to remove any erronious values
+    % that may have slipped through
+    % [E, P] = PSDM.reduceModelComplexity(DH_ext, X, g, E, P, 'max_relative_error', tol*10, 'Ntests', size(E, 2)*5);
     
     % Output information, if required.
     utilities.vprint(v, "\nRobot matching done. Took %.3g s total.\n", toc(t));

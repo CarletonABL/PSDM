@@ -1,21 +1,27 @@
-function Pi = simplifyReductionMatrix(Pi)
+function P = simplifyReductionMatrix(P, tol_in)
     % SIMPLIFYREDUCTIONMATRIX Transforms a set of reduction matrices Pi to
     % a slightly simpler form, by normalizing each column by the first
     % element in it.
     %
     %   Pi = PSDM.simplifyReductionMatrix(Pi);
-    %
     
-    N = numel(Pi);
-    ell = size(Pi, 2);
-    tol = 1e-6;
+    if nargin < 2 || isempty(tol_in)
+        tol = 1e-9;
+    else
+        tol = tol_in;
+    end
+    
+    ell = size(P, 2);
+    tol2 = 1e-6;
     
     for j = 1:ell
-        Pij = Pi(:, j, :);
-        factorInd = find( abs( Pij ) > tol, 1);
+        Pij = P(:, j, :);
+        factorInd = find( abs( Pij ) > tol2, 1);
         if ~isempty(factorInd)
             factor = Pij(factorInd(1));
-            Pi(:, j, :) = Pi(:, j, :) / factor;
+            P(:, j, :) = P(:, j, :) / factor;
         end
     end
     
+    % Second step, set any terms less than tolerance to zero
+    P(abs(P) < tol) = 0;

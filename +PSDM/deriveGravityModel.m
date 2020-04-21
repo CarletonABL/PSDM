@@ -114,6 +114,10 @@ function [Ep_grav, P_grav] = deriveGravityModel(DH_ext, g_in, X_in, tol_in, v_in
     
     % Get reduction matrix
     P_grav = PSDM.findReductionMatrix(DH_ext, X, g, Ep_grav, 'gravity', [], tol, v);
+    
+    % Simplify P matrices by normalizing each column by the value of the
+    % first nonzero value in P.
+    P_grav = PSDM.simplifyReductionMatrix(P_grav, tol);
 
     % Output information, if required.
     utilities.vprint(v, '\tGravity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P_grav, 2)), toc(time));

@@ -14,8 +14,9 @@ function C = blockprod(A_in, B_in)
         try
             C = utilities.blockprod_mex(A_in, B_in);
             return;
-        catch
+        catch e
             warning("utilities not compiled. You should run utilities.make!");
+            disp(e);
         end
     end
     

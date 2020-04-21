@@ -1,4 +1,4 @@
-function [Ep_vel, P_vel] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
+function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
     % RUNIDVEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling), but only for the velocity terms.
     %
@@ -74,6 +74,8 @@ function [Ep_vel, P_vel] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in
     % Output information if required.
     utilities.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
     
+    p_vel = 0; % Keep track of number of functions
+    
     % Loop through each centrifugal acceleration term
     for j = 1:DOF
             
@@ -100,7 +102,7 @@ function [Ep_vel, P_vel] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in
         % Store results, and find reduction matrix
         Ei{j} = Ep_cent_i(:, maskCorr);
         Pi{j} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cent_i(:, maskCorr), {'centripital', j}, [], tol, v);
-        
+        p_vel = p_vel + size(Pi{j}, 2);
     end
     
     % Output information, if required
@@ -135,14 +137,10 @@ function [Ep_vel, P_vel] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in
         % Store results, find reduction matrix
         Ei{DOF+i} = Ep_cor_ij(:, maskCorr);
         Pi{DOF+i} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cor_ij(:, maskCorr), {'coriolis', ij}, [], tol, v);
-        
+        p_vel = p_vel + size(Pi{DOF+i}, 2);
     end
     
-    % Combine all models
-    utilities.vprint(v, "\tCombining terms:\n");
-    [Ep_vel, P_vel] = PSDM.combineModels(DH_ext, X, [], Ei, Pi, 'velocity', tol, v);
-
     % Output information, if required.
-    utilities.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(sum(mask)), toc(time));
+    utilities.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(p_vel), toc(time));
    
 end

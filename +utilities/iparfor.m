@@ -33,7 +33,13 @@ function res = iparfor( func, N, sz, specifySize )
     
     if utils.autoPar
         parfor i = 1:N
-            res_i = func(i);
+            
+            if coder.const(coder.target('matlab'))
+                res_i = feval(func, i);
+            else
+                res_i = func(i);
+            end
+            
             if specifySize
                 coder.varsize('res_i', sz, [1 1]);
             else

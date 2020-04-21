@@ -1,4 +1,4 @@
-function [Ep_acc, P_acc] = deriveAccelModel(DH_ext, X, tol, v)
+function [Ei, Pi] = deriveAccelModel(DH_ext, X, tol, v)
     % RUNIDACCEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling), but only for the acceleration terms.
     %
@@ -63,6 +63,8 @@ function [Ep_acc, P_acc] = deriveAccelModel(DH_ext, X, tol, v)
     Ei = cell(DOF, 1);
     Pi = cell(DOF, 1);
     
+    p_acc = 0; % Keep track of number of terms in final result
+    
     % Loop through each joint
     for j = 1:DOF
             
@@ -87,14 +89,10 @@ function [Ep_acc, P_acc] = deriveAccelModel(DH_ext, X, tol, v)
         % Build up E matrix for each joint
         Ei{j} = Em_joint(:, maskCorr);
         Pi{j} = PSDM.findReductionMatrix(DH_ext, X, [], Em_joint(:, maskCorr), {'accel', j}, [], tol, v);
-        
+        p_acc = p_acc + size(Pi{j}, 2);
     end
     
-    % Combine and reduce terms.
-    utilities.vprint(v, "\tCombining terms:\n");
-    [Ep_acc, P_acc] = PSDM.combineModels(DH_ext, X, [], Ei, Pi, 'accel', tol, v);
-    
     % Output information, if required.
-    utilities.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(size(P_acc, 2)), toc(t));
+    utilities.vprint(v, '\tAccel matching done. %d terms remaining (took %.3g sec total).\n\n', int32(p_acc), toc(t));
     
 end
