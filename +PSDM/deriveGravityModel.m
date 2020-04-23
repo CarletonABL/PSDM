@@ -93,7 +93,7 @@ function [Ep_grav, P_grav] = deriveGravityModel(DH_ext, g_in, X_in, tol_in, v_in
     assert(all(abs(DH_ext(:, 6)) == 1), "Link sign column appears invalid. All numbers must be -1 or 1!");
     assert(size(X, 2) == 10 && size(X, 1) == size(DH_ext, 1), "X appears to be the wrong size!");
     assert(all(X(:, [1, 5, 6, 7]) >= 0, 'all'), "Negative masses and principle inertias Ixx Iyy Izz are not possible!")
-    assert(sum(g.^2)==1, "Gravity vector is not a unit vector.")
+    assert(abs(sum(g.^2) - 1) < 1e-2, "Gravity vector is not a unit vector.")
 
     %% Function start
     

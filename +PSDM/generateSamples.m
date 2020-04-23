@@ -38,7 +38,7 @@ function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
         g = zeros(3, 1);
     else
         g = g_in(1:3, 1);
-        assert(~any(strcmp({type, type}, {'gravity', 'all'})) || sum(g.^2) == 1, "Must give a unit vector for gravity direction!");
+        assert(~any(strcmp({type, type}, {'gravity', 'all'})) || abs(sum(g.^2) - 1) < 1e-2, "Must give a unit vector for gravity direction!");
         coder.varsize('g', [3 1], [0 0]);
     end
     

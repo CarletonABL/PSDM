@@ -23,20 +23,11 @@ function Ym = getSetYm(DH_ext, type, Up_acc_in)
     Up1 = PSDM.getSetUpsilon(DH_ext, uint8(1));
     Up2 = PSDM.getSetUpsilon(DH_ext, uint8(2));
     
+    
     % Velocity upsilon can be calculated from acceration terms, if given,
     % or just from Up2.
     if nargin > 2 && ~isempty(Up_acc_in)
-        
-        if iscell(Up_acc_in)
-            % Need to concatenate. Don't need to reduce since these
-            % functions are already unique and will be reduced later
-            % anyway.
-            Up_acc = horzcat(Up_acc_in{:});
-        else
-            Up_acc = Up_acc_in;
-        end
-        
-        Up_vel = PSDM.getSetUpsilon_diff(Up_acc, DH_ext);
+        Up_vel = parseUp_acc(Up_acc_in, DH_ext);
     else
         Up_vel = Up2;
     end
@@ -84,4 +75,34 @@ function Y = makeY(Up, A)
                  repelem(A, 1, Mup) );
 
 end
+
+function Up_vel = parseUp_acc(Up_acc_in, DH_ext)
+
+    if iscell(Up_acc_in)
+        % Need to concatenate. Don't need to reduce since these
+        % functions are already unique and will be reduced later
+        % anyway.
+        
+        if coder.target('matlab')
+            Up_acc = horzcat(Up_acc_in{:});
+        else
+            % Coder needs a bit more help with this command
+            c = 0;
+            for i = 1:numel(Up_acc_in)
+                c = c+size(Up_acc_in{i}, 2);
+            end
+            Up_acc = zeros( size(Up_acc_in{1}, 1), c, class(Up_acc_in{1}));
+            c = 0;
+            for i = 1:numel(Up_acc_in)
+                s = size(Up_acc_in{i}, 2);
+                Up_acc(:, (c+1):(c+s)) = Up_acc_in{i};
+                c = c + s;
+            end
+        end
+    else
+        Up_acc = Up_acc_in;
+    end
+
+    Up_vel = PSDM.getSetUpsilon_diff(Up_acc, DH_ext);
     
+end

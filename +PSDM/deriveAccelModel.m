@@ -63,7 +63,6 @@ function [Ei, Pi] = deriveAccelModel(DH_ext, X, tol, v)
     Ei = cell(DOF, 1);
     Pi = cell(DOF, 1);
     
-    p_acc = 0; % Keep track of number of terms in final result
     
     % Loop through each joint
     for j = 1:DOF
@@ -89,7 +88,13 @@ function [Ei, Pi] = deriveAccelModel(DH_ext, X, tol, v)
         % Build up E matrix for each joint
         Ei{j} = Em_joint(:, maskCorr);
         Pi{j} = PSDM.findReductionMatrix(DH_ext, X, [], Em_joint(:, maskCorr), {'accel', j}, [], tol, v);
-        p_acc = p_acc + size(Pi{j}, 2);
+
+    end
+    
+    % Determine size of P
+    p_acc = 0; % Keep track of number of terms in final result
+    for i = 1:numel(Pi)
+        p_acc = p_acc + size(Pi{i}, 2);
     end
     
     % Output information, if required.

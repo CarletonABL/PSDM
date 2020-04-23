@@ -1,4 +1,4 @@
-function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
+function [E, P] = combineModels(DH_ext, X, g, Ei_in, Pi_in, idType, tol, v)
     % COMBINEMODELS Combines multiple dynamic model components (specified
     % by a cell array of Ei and Pi exponent and reduction matrices,
     % respectively.
@@ -8,9 +8,53 @@ function [E, P] = combineModels(DH_ext, X, g, Ei, Pi, idType, tol, v)
     
     %% Parse Inputs
     
-    N = numel(Ei);
     DOF = size(DH_ext, 1);
+    N = 1 + DOF*2 + nchoosek(DOF, 2);
+    assert(N< 1000);
     
+    % Parse inputs if a cell array of cells is given
+    if iscell(Pi_in) && iscell(Pi_in{1})
+        % We've been given a cell array of cell arrays
+        if coder.target('matlab') && false
+            Ei = vertcat( Ei_in{:} );
+            Pi = vertcat( Pi_in{:} );
+        else
+            % So matlab is bad at handling cell arrays for codegen.
+            % Additionally, I can't move this into a subfunction because
+            % then matlab doesn't recognize the code patterns. So it stays.
+            
+            % Initialize the cell array and clearly show that each element
+            % is assigned a value (in a loop)
+            Ei = cell(N, 1);
+            for i = 1:N
+                Ei{i} = uint8(0);
+            end
+            Pi = cell(N, 1);
+            for i = 1:N
+                Pi{i} = 0;
+            end
+            
+            % Now assign the actual value into the cell array.
+            c = 1;
+            for i = 1:numel(Ei_in)
+                for j = 1:numel(Ei_in{i})
+                    Ei{c} = Ei_in{i}{j};
+                    c = c+1;
+                end
+            end
+            c = 1;
+            for i = 1:numel(Pi_in)
+                for j = 1:numel(Pi_in{i})
+                    Pi{c} = Pi_in{i}{j};
+                    c = c+1;
+                end
+            end
+        end
+    else
+        Ei = Ei_in;
+        Pi = Pi_in;
+    end
+
     % Check P
     for i = 1:N
         if nargin < 5 || numel(Pi) < i || isempty(Pi{i})

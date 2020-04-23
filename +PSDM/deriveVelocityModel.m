@@ -60,22 +60,24 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
     jointCombinations = nchoosek(1:DOF, 2); % Generate possible coriolis combinations
     mask = ones(1, Nterms, 'logical');
     Naccels = DOF + size(jointCombinations, 1);
+    assert(Naccels < 1000);
+
     Ei = cell(Naccels, 1);
-    Pi = cell(Naccels, 1);
-    
-    % Pre-allocate variables    
-    if DOF < 4 || ~coder.target('matlab')
+    if ~coder.target('matlab')
         for i = 1:Naccels
-            Ei{i} = zeros(4*DOF, 1, 'uint8');
+            Ei{i} = zeros(5*DOF, 1, 'uint8');
+        end
+    end
+    Pi = cell(Naccels, 1);
+    if ~coder.target('matlab')
+        for i = 1:Naccels
             Pi{i} = zeros(1,1);
         end
     end
     
     % Output information if required.
     utilities.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
-    
-    p_vel = 0; % Keep track of number of functions
-    
+        
     % Loop through each centrifugal acceleration term
     for j = 1:DOF
             
@@ -102,7 +104,6 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
         % Store results, and find reduction matrix
         Ei{j} = Ep_cent_i(:, maskCorr);
         Pi{j} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cent_i(:, maskCorr), {'centripital', j}, [], tol, v);
-        p_vel = p_vel + size(Pi{j}, 2);
     end
     
     % Output information, if required
@@ -137,10 +138,20 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
         % Store results, find reduction matrix
         Ei{DOF+i} = Ep_cor_ij(:, maskCorr);
         Pi{DOF+i} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cor_ij(:, maskCorr), {'coriolis', ij}, [], tol, v);
-        p_vel = p_vel + size(Pi{DOF+i}, 2);
+    end
+    
+    % Get number of functions
+    p_vel = 0; % Keep track of number of terms in final result
+    for i = 1:numel(Ei)
+        p_vel = p_vel + size(Ei{i}, 2);
+    end
+    % Get number of functions
+    ell_vel = 0; % Keep track of number of terms in final result
+    for i = 1:numel(Pi)
+        ell_vel = ell_vel + size(Pi{i}, 2);
     end
     
     % Output information, if required.
-    utilities.vprint(v, '\tVelocity matching done. %d terms remaining (took %.3g sec total).\n\n', int32(p_vel), toc(time));
+    utilities.vprint(v, '\tVelocity matching done. %d / %d terms remaining (took %.3g sec total).\n\n', int32(p_vel), int32(ell_vel), toc(time));
    
 end
