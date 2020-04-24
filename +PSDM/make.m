@@ -124,37 +124,38 @@ function make(functions)
         
     end
     
-    %% inverseDynamics
+    if any(strcmp(functions, 'generateSamples')) || any(strcmp(functions, 'all'))
     
-    if any(strcmp(functions, 'inverseDynamics')) || any(strcmp(functions, 'all'))
-    
-        fprintf("Compiling PSDM.inverseDynamics into mex file... ");
+        fprintf("Compiling PSDM.generateSamples into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
         cfg = coder.config('mex');
         cfg.GenerateReport = true;
         cfg.ReportPotentialDifferences = false;
-        cfg.IntegrityChecks = false;
-        cfg.ResponsivenessChecks = false;
         cfg.ExtrinsicCalls = false;
 
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
         ARGS{1} = cell(6,1);
-        ARGS{1}{1} = coder.typeof(uint8(0),[40 10000],[1 1]);
-        ARGS{1}{2} = coder.typeof(0,[10000  100   10],[1 1 1]);
-        ARGS{1}{3} = coder.typeof(0,[100  1],[1 0]);
-        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{6} = coder.typeof(0,[10 Inf],[1 1]);
+        ARGS{1}{1} = coder.typeof(0,[10  6],[1 0]);
+        ARGS{1}{2} = coder.typeof(0,[10 10],[1 0]);
+        ARGS{1}{3} = coder.typeof(0,[3 1], [1 1]);
+        ARGS{1}{4} = coder.typeof(0);
+        ARGS{1}{5} = coder.typeof(0);
+        ARGS_1_6 = cell([1 2]);
+        ARGS_1_6{1} = coder.typeof('X',[1 20],[1 1]);
+        ARGS_1_6{2} = coder.typeof(0,[1 10],[1 1]);
+        ARGS{1}{6} = coder.typeof(ARGS_1_6,[1 2]);
+        ARGS{1}{6} = ARGS{1}{6}.makeHeterogeneous();
 
         cd(fullfile(path, '+PSDM'));
-        codegen -config cfg -I path +PSDM/inverseDynamics -args ARGS{1}
+        codegen -config cfg -I path +PSDM/generateSamples -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");
         
     end
+    
     
     %% forwardDynamics
     

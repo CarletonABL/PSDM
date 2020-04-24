@@ -15,7 +15,7 @@ function [E, P] = combineModels(DH_ext, X, g, Ei_in, Pi_in, idType, tol, v)
     % Parse inputs if a cell array of cells is given
     if iscell(Pi_in) && iscell(Pi_in{1})
         % We've been given a cell array of cell arrays
-        if coder.target('matlab') && false
+        if coder.target('matlab')
             Ei = vertcat( Ei_in{:} );
             Pi = vertcat( Pi_in{:} );
         else

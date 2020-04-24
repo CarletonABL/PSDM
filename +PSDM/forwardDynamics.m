@@ -32,7 +32,7 @@ function Qdd = forwardDynamics(E, P, Theta, Q, Qd, tau)
     
     %% Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex
+    if coder.target('matlab') && c.allow_mex_basic
          try
             Qdd = PSDM.forwardDynamics_mex(E, P, Theta, Q, Qd, tau);
             return; 

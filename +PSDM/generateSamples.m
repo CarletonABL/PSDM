@@ -44,7 +44,7 @@ function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
     
     % Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex
+    if coder.target('matlab') && c.allow_mex_basic
         try
             if nargout > 3
                 [Q, Qd, Qdd, tau] = PSDM.generateSamples_mex(DH_ext, X, g, Nq, Nt, {type, joints});

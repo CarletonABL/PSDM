@@ -16,7 +16,7 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     
     % Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex
+    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex_basic
          try
             Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
             return; 

@@ -49,13 +49,13 @@ function Ym = getSetYm(DH_ext, type, Up_acc_in)
         case 'gravity'
             Ym = Ygrav;
         case 'coriolis'
-            Ym = Ycor;
+            Ym = simplifyY_vel( Ycor, DH_ext );
         case 'centrifugal'
-            Ym = Ycent;
+            Ym = simplifyY_vel( Ycent, DH_ext );
         case 'joint'
-            Ym = Yjoint;
+            Ym = simplifyY_accel( Yjoint, DH_ext );
         case 'velocity'
-            Ym = horzcat(Ycor, Ycent);
+            Ym = simplifyY_vel( horzcat(Ycor, Ycent ) , DH_ext );
         case 'all'
             Ym = horzcat(Ygrav, Ycent, Ycor, Yjoint);
         otherwise
@@ -73,6 +73,54 @@ function Y = makeY(Up, A)
     
     Y = vertcat( repmat(Up, [1, Macc]), ...
                  repelem(A, 1, Mup) );
+
+end
+
+function Ym_trim = simplifyY_accel( Ym, DH_ext )
+    % We can filter out all functions of joint 1 for Upsilon_2 when dealing
+    % with acceleration functions.
+    
+    DOF = size(DH_ext, 1);
+    m = size(Ym, 2);
+    mask = ones(1, m, 'logical');
+    
+    removeMask = any(Ym( horzcat( 1, DOF+1, 2*DOF+1 ), :) > 0, 1);
+    mask(removeMask) = false;
+    
+    Ym_trim = Ym(:, mask);
+
+end
+
+
+function Ym_trim = simplifyY_vel( Ym, DH_ext )
+    % We can filter out all centrifugal terms which have elements of lower
+    % joint angles trig functions of order greater than 1, same thing for
+    % coriolis terms
+    
+    DOF = size(DH_ext, 1);
+    m = size(Ym, 2);
+    mask = ones(1, m, 'logical');
+    
+    for i = 1:DOF
+        centJointMask = Ym(3*DOF + i, :) == uint8(2);
+        trigMask = any( Ym(1:i, :) + Ym((1:i) + DOF, :) + Ym((1:i) + 2*DOF, :) > uint8(1), 1);
+        removeMask = all( vertcat(centJointMask, trigMask), 1);
+        mask(removeMask) = false;
+    end
+    
+    combs = nchoosek(1:DOF, 2);
+    Ncombs = size(combs, 1);
+    for k = 1:Ncombs
+        i = combs(k, 1); j = combs(k, 2);
+        corJointMask = all( vertcat( Ym(3*DOF + i, :) == uint8(1), ...
+                                     Ym(3*DOF + j, :) == uint8(1)), 1);
+        h = min(i, j);
+        trigMask = any( Ym(1:h, :) + Ym((1:h) + DOF, :) + Ym((1:h) + 2*DOF, :) > uint8(1), 1);
+        removeMask = all( vertcat(corJointMask, trigMask), 1);
+        mask(removeMask) = false;
+    end
+        
+    Ym_trim = Ym(:, mask);
 
 end
 

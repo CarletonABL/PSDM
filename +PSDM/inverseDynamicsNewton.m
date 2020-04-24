@@ -146,7 +146,7 @@ function [wrench, extra] = ...
     
     %% Check if MEX exists, if so, run that
     c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex_rne
+    if coder.target('matlab') && c.allow_mex_basic
         try
             [wrench, extra] = ...
                 PSDM.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));

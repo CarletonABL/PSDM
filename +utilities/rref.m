@@ -21,6 +21,7 @@ function A_out = rref(A, tol_in, compact_in)
 %   Copyright 1984-2017 The MathWorks, Inc. 
 
 [m,n] = size(A);
+r = rank(A);
 
 % Compute the default tolerance if none was provided.
 if (nargin < 2) || isempty(tol_in)
@@ -82,7 +83,6 @@ end
 
 % Trim out the bottom of the array, if desired.
 if compact
-    r = rank(A);
     A_out = A(1:r, :);
 else
     A_out = A;

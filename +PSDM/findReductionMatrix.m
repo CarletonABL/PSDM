@@ -60,12 +60,10 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     
     % Number of joint states to test at. Use a number greater than
     % required to reduce error
-    % Nq = max(round(M * 2), DOF*10*2);
-    Nq = max(round(M*(2 + 2*beCareful)), DOF*10*2);
+    Nq = max(round(M*(1.2 + 1*beCareful)), DOF*30);
     
     % Max number of inertial parameters is DOF*10
-    % Nt = round(DOF * 100); 
-    Nt = round(DOF * 50);
+    Nt = round(DOF * 10);
     
     % Generate samples
     [Q_stack, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
@@ -73,22 +71,32 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Make Y matrix, transform it with P1, if given
     Y = PSDM.generateYp(Q_stack, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
-    
+        
     % Solve each regression problem in a loop
-    Ti = coder.nullcopy(zeros( M, Nt, DOF ));
-    for i = 1:DOF
-        Ti(:, :, i) = linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
+    % If Yi is the same for all i, solve this in a single step
+    if beCareful
+        Ti = coder.nullcopy(zeros( M, Nt, DOF ));
+        for i = 1:DOF
+            Ti(:, :, i) = linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
+        end
+    else
+        Ti_horzstack = linsolve( Yi(:, :, 1), utils.vertStack(permute(tau, [3, 1, 2]))');
+        Ti = zeros(M, Nt, DOF);
+        for i = 1:DOF
+            Ti(:, :, i) = Ti_horzstack(:, (i-1)*Nt + (1:Nt));
+        end
     end
-    
-    % Stack T vectors vertically
+        
     T = utilities.vertStack(Ti, 3);
     
-    % Round out any columns smaller than a tolerance
     
     % Reduce to minimum parameters. Since we stacked all Theta vectors
     % vertically, the result will be a vertical stacking of the P_inv
     % vectors.
-    Q_stack = utilities.rref(T', [], true);
+    % Q_stack = utilities.rref(T', [], true);
+    c = PSDM.config;
+    Q_stack = utilities.rrefQR(T', [], true, c.use_iterative_refinement);
+    
     
     % The rank of the matrix
     b = size(Q_stack, 1);
