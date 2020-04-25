@@ -3,19 +3,21 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     p = inputParser;
     p.addOptional('do_mex', false);
     p.addOptional('parallel', false);
+    p.addOptional('tau_type', 'vector');
+    p.addOptional('mult_type', 'individual');
+    p.addOptional('assign_type', 'newline');
     p.parse(varargin{:});
     opt = p.Results;
 
     DOF = size(P, 3);
     
     % Make base code
-    [Up1, A1, setupCode, Up1names, Up1code, A1names, A1code] = makeBaseCode(E, P);
-    
-    % Build up Y matrix   
-    Ycode = makeYMatrixCode(E, 'Ypi', Up1, Up1names, A1, A1names);
-    
-    % Build up PTheta code
-    PThetaCode = makePThetaCode(P, Theta, 'PTheta');  
+    [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, Theta);
+    [vars, names, code] = PSDM.fgen.makePhiCode(vars, names, code, 'Phi_b');
+    [vars, names, code] = PSDM.fgen.makeUpsilonCode2(vars, names, code, opt);
+    [vars, names, code] = PSDM.fgen.makeAccelCode(vars, names, code, opt);
+    [vars, names, code] = PSDM.fgen.makeYMatrixCode(vars, names, code, 'Ypi', opt);
+    [vars, names, code] = PSDM.fgen.makeTauCode(vars, names, code, opt);
     
     %% Make function
     
@@ -24,11 +26,12 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     dir = fileparts(mfilename('fullpath'));
     funcText = fileread( fullfile(dir, 'templates', 'inverseDynamics.m') );
     
-    funcText = strrep(funcText, '%SETUPCODE%', setupCode);
-    funcText = strrep(funcText, '%UPCODE%', Up1code);
-    funcText = strrep(funcText, '%ACODE%', A1code);
-    funcText = strrep(funcText, '%YCODE%', Ycode);
-    funcText = strrep(funcText, '%PTHETACODE%', PThetaCode);
+    funcText = strrep(funcText, '%SETUPCODE%', code.setup);
+    funcText = strrep(funcText, '%UPCODE%', code.Up);
+    funcText = strrep(funcText, '%ACODE%', code.A);
+    funcText = strrep(funcText, '%YCODE%', code.Y);
+    funcText = strrep(funcText, '%PTHETACODE%', code.Phi);
+    funcText = strrep(funcText, '%TAUCODE%', code.tau);
     funcText = strrep(funcText, 'function tau = inverseDynamics(Q, Qd, Qdd)', ...
         sprintf('function tau = %s(Q, Qd, Qdd)', funcName));
     funcText = strrep(funcText, '%p%', ...

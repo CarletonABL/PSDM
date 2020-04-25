@@ -1,34 +1,29 @@
 function tau = inverseDynamics(Q, Qd, Qdd)
 
-g = horzcat( Q', sin(Q)', cos(Q)');
-
-a = horzcat(Qd', Qdd');
+g = vertcat( Q, sin(Q), cos(Q), Qd, Qdd);
 
 N = size(Q, 2);
 DOF = size(Q, 1);
 
 tau = zeros(DOF, N);
 
+%SETUPCODE%
+
 %PTHETACODE%
 
 for i = 1:N
-
-gi = g(i, :);
-ai = a(i, :);
-
-%SETUPCODE%
-
-
+    
+gi1 = g(colMask, i);
+gi2 = gi1(squareMask).^2;
+   
 %UPCODE%
-
 
 %ACODE%
 
-
 %YCODE%
 
-tau(:, i) = (Ypi * PTheta)';
+%TAUCODE%
 
 end
 
-
+end
