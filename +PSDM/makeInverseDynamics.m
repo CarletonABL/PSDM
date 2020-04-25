@@ -6,13 +6,14 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     p.addOptional('tau_type', 'vector');
     p.addOptional('mult_type', 'individual');
     p.addOptional('assign_type', 'newline');
+    p.addOptional('use_gpu', false);
     p.parse(varargin{:});
     opt = p.Results;
 
     DOF = size(P, 3);
     
     % Make base code
-    [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, Theta);
+    [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, Theta, opt);
     [vars, names, code] = PSDM.fgen.makePhiCode(vars, names, code, 'Phi_b');
     [vars, names, code] = PSDM.fgen.makeUpsilonCode2(vars, names, code, opt);
     [vars, names, code] = PSDM.fgen.makeAccelCode(vars, names, code, opt);
@@ -56,12 +57,16 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         fprintf("Compiling into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
-        cfg = coder.config('mex');
-        cfg.GenerateReport = true;
-        cfg.ReportPotentialDifferences = false;
-        cfg.IntegrityChecks = false;
-        cfg.ResponsivenessChecks = false;
-        cfg.ExtrinsicCalls = false;
+        if ~opt.use_gpu
+            cfg = coder.config('mex');
+            cfg.GenerateReport = true;
+            cfg.ReportPotentialDifferences = false;
+            cfg.IntegrityChecks = false;
+            cfg.ResponsivenessChecks = false;
+            cfg.ExtrinsicCalls = false;
+        else
+            cfg = coder.gpuConfig('mex');
+        end
 
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
