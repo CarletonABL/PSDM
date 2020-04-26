@@ -67,24 +67,31 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     % Solve for masks
     mask = any( abs(theta) > tol , 2)';
     
-    % Check reprojection
-    r = Y(:, mask) * theta(mask, :) - tau;
-    
-    if any(abs(r) > 1e-3, 'all')
-        if coder.target('matlab')
-            warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
-            keyboard;
-        else
-            fprintf("Reprojection test failed, max reprojection error is %.3g!\n PROCESS FAILED.\n\n", max(abs(r), [], 'all'));
-        end
-    end
-    
     % Output information, if required.
-    utilities.vprint(v, "\t\t%d terms reduced to %d, Took %.2f seconds.\n\t\tMax Reprojection Error: %.3g.\n", ...
+    utilities.vprint(v, "\t\t%d terms reduced to %d, Took %.2f seconds.\n", ...
         int32(m), ...
         int32(sum(mask)), ...
-        toc(time), ...
-        max(abs(r), [], 'all'));
+        toc(time));
+    
+    c = PSDM.config;
+    if c.do_reprojection_tests
+    
+        % Check reprojection
+        r = Y(:, mask) * theta(mask, :) - tau;
+
+        if any(abs(r) > 1e-3, 'all')
+            if coder.target('matlab')
+                warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
+                keyboard;
+            else
+                fprintf("Reprojection test failed, max reprojection error is %.3g!\n PROCESS FAILED.\n\n", max(abs(r), [], 'all'));
+            end
+        end
+        
+        % Output information, if required.
+        utilities.vprint(v, "\t\tMax Reprojection Error: %.3g.\n",  max(abs(r), [], 'all'));
+    
+    end
     
 end
 

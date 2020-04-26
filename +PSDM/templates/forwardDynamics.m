@@ -1,23 +1,21 @@
 function Qdd = forwardDynamics(Q, Qd, tau)
 
-g = horzcat( Q', sin(Q)', cos(Q)');
-
-a = horzcat(Qd', ones(size(Qd))');
+g = vertcat( Q, sin(Q), cos(Q), Qd);
 
 N = size(Q, 2);
-DOF = size(Q, 1);
 
 Qdd = zeros(DOF, N);
+tau_ind = coder.nullcopy(zeros(DOF, 1));
+D = coder.nullcopy(zeros(DOF, DOF));
 
-%PTHETA_INDUCED_CODE%
-%PTHETA_ACCEL_CODE%
+%SETUP1_CODE%
+
+%PHI_CODE%
 
 for i = 1:N
 
-gi = g(i, :);
-ai = a(i, :);
-
-%SETUP_CODE%
+gi = g(:, i);
+%SETUP2_CODE%
 
 
 %UP_CODE%
@@ -26,17 +24,13 @@ ai = a(i, :);
 %A_CODE%
 
 
-%Y_INDUCED_CODE%
+%Y_CODE%
 
 
-%UP_ACCEL_CODE%
+%TAU_CODE%
 
 
-%D_CODE%
-
-tau_induced = (Yp_induced_i * PTheta_induced)';
-
-Qdd(:, i) = Di \ (tau(:, i) - tau_induced);
+Qdd(:, i) = D \ (tau(:, i) - tau_ind);
 
 end
 

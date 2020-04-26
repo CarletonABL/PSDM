@@ -7,22 +7,22 @@ DOF = size(Q, 1);
 
 tau = zeros(DOF, N);
 
-%SETUPCODE%
+%SETUP_CODE%
 
-%PTHETACODE%
+%PHI_CODE%
 
 for i = 1:N
     
 gi1 = g(colMask, i);
 gi2 = gi1(squareMask).^2;
    
-%UPCODE%
+%UP_CODE%
 
-%ACODE%
+%A_CODE%
 
-%YCODE%
+%Y_CODE%
 
-%TAUCODE%
+%TAU_CODE%
 
 end
 

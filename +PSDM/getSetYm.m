@@ -84,8 +84,16 @@ function Ym_trim = simplifyY_accel( Ym, DH_ext )
     m = size(Ym, 2);
     mask = ones(1, m, 'logical');
     
-    removeMask = any(Ym( horzcat( 1, DOF+1, 2*DOF+1 ), :) > 0, 1);
-    mask(removeMask) = false;
+    % Remove any function dependent on joint 1 position
+    removeMask1 = any(Ym( horzcat( 1, DOF+1, 2*DOF+1 ), :) > 0, 1);
+    mask(removeMask1) = false;
+    
+    for i = 1:DOF
+        jointMask = Ym(4*DOF + i, :) > uint8(0);
+        trigMask = any( (Ym(1:i, :) + Ym((1:i) + DOF, :) + Ym((1:i) + 2*DOF, :)) > uint8(1), 1);
+        removeMask2 = all( vertcat(jointMask, trigMask), 1);
+        mask(removeMask2) = false;
+    end
     
     Ym_trim = Ym(:, mask);
 
@@ -101,11 +109,15 @@ function Ym_trim = simplifyY_vel( Ym, DH_ext )
     m = size(Ym, 2);
     mask = ones(1, m, 'logical');
     
+    % Remove any function dependent on joint 1 position
+    removeMask1 = any(Ym( horzcat( 1, DOF+1, 2*DOF+1 ), :) > 0, 1);
+    mask(removeMask1) = false;
+    
     for i = 1:DOF
         centJointMask = Ym(3*DOF + i, :) == uint8(2);
-        trigMask = any( Ym(1:i, :) + Ym((1:i) + DOF, :) + Ym((1:i) + 2*DOF, :) > uint8(1), 1);
-        removeMask = all( vertcat(centJointMask, trigMask), 1);
-        mask(removeMask) = false;
+        trigMask = any( (Ym(1:i, :) + Ym((1:i) + DOF, :) + Ym((1:i) + 2*DOF, :)) > uint8(1), 1);
+        removeMask2 = all( vertcat(centJointMask, trigMask), 1);
+        mask(removeMask2) = false;
     end
     
     combs = nchoosek(1:DOF, 2);
@@ -115,9 +127,9 @@ function Ym_trim = simplifyY_vel( Ym, DH_ext )
         corJointMask = all( vertcat( Ym(3*DOF + i, :) == uint8(1), ...
                                      Ym(3*DOF + j, :) == uint8(1)), 1);
         h = min(i, j);
-        trigMask = any( Ym(1:h, :) + Ym((1:h) + DOF, :) + Ym((1:h) + 2*DOF, :) > uint8(1), 1);
-        removeMask = all( vertcat(corJointMask, trigMask), 1);
-        mask(removeMask) = false;
+        trigMask = any( (Ym(1:h, :) + Ym((1:h) + DOF, :) + Ym((1:h) + 2*DOF, :)) > uint8(1), 1);
+        removeMask3 = all( vertcat(corJointMask, trigMask), 1);
+        mask(removeMask3) = false;
     end
         
     Ym_trim = Ym(:, mask);

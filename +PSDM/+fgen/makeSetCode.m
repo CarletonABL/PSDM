@@ -39,14 +39,13 @@ function [vars, names, code] = makeSetCode(S, name, vars, names, code, opt)
         [vars1, names1, code1] = PSDM.fgen.makeSetCode(Su1, name1, vars, names1, code, opt);
         [vars2, names2, code2] = PSDM.fgen.makeSetCode(Su2, name2, vars, names2, code, opt);
         
-        [vars, names, code] = PSDM.fgen.codeSet(Su, name, ...
-                                                vars, names, code, ...
-                                                vars1, names1, code1, ...
-                                                vars2, names2, code2, opt);
+        [names.s, code.S] = PSDM.fgen.codeSet(Su, name, false, opt, ...
+                                              vars1.Su, names1.s, code1.S, ...
+                                              vars2.Su, names2.s, code2.S);
         
     else
         % n is 1 or 2, so now just multiply out sets
-        [vars, names, code] = PSDM.fgen.codeSetSingle(Su, name, vars, names, code, opt);
+        [vars, names, code] = PSDM.fgen.codeSetSingle(Su, name, false, vars, names, code, opt);
     end
     
     % Append relevant variables to variables structure

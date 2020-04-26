@@ -1,23 +1,30 @@
-function [vars, names, code] = codeSet(Su, name, ...
-                                 vars, names, code, ...
-                                 vars1, names1, code1, ...
-                                 vars2, names2, code2, opt)
+function [setNames, setCode] = codeSet(Su, name, keepAllElements, opt, ...
+                                 Su1, set1Names, set1Code, ...
+                                 Su2, set2Names, set2Code)
     % Generates the actual code for a set.
-    
-    mult_type = opt.mult_type; %'matrix';
-    
+
     % Get size of set
     Mu = size(Su, 2);
     
+    % Some defaults. If only one set is given, then we just want to
+    % "rearrange" that set's names to form the desired variables
+    if nargin < 10
+        % No second set given
+        % Can trick the following set by just given a bunch of zeros
+        % as second set
+        Su = vertcat(Su, zeros(1, Mu));
+        Su2 = 0;
+    end
+    
     % Break out some variables
-    S1 = vars.Su1;
-    S2 = vars.Su2;
-    Su1 = vars1.Su;
-    Su2 = vars2.Su;
+    n1 = size(Su1, 1);
+    n2 = size(Su2, 1);
+    S1 = Su(1:n1, :);
+    S2 = Su((n1+1):(n1+n2), :);
     
     % Pre-init elements
-    code.s = repelem({''}, Mu);
-    names.s = repelem({''}, Mu);
+    elCode = repelem({''}, Mu);
+    setNames = repelem({''}, Mu);
     
     % Loop through each element of unique set
     c = 0;
@@ -38,45 +45,43 @@ function [vars, names, code] = codeSet(Su, name, ...
         % Make code for this element
         if ~s1_empty && ~s2_empty
             c = c+1;
-            names.s{i} = sprintf('%s(%d)', name, c);
-            code.s{c} = sprintf('%s.*%s', names1.s{s1_ind}, names2.s{s2_ind});
-            code.s_els1{c} = names1.s{s1_ind};
-            code.s_els2{c} = names2.s{s2_ind};
+            setNames{i} = sprintf('%s(%d)', name, c);
+            elCode{c} = sprintf('%s.*%s', set1Names{s1_ind}, set2Names{s2_ind});
         elseif ~s1_empty && s2_empty
-            names.s{i} = names1.s{s1_ind};
+            setNames{i} = set1Names{s1_ind};
+            if keepAllElements
+                c = c+1;
+                elCode{c} = setNames{i};
+            end
         elseif s1_empty && ~s2_empty
-            names.s{i} = names2.s{s2_ind};
+            setNames{i} = set2Names{s2_ind};
+            if keepAllElements
+                c = c+1;
+                elCode{c} = setNames{i};
+            end
         else
-            names.s{i} = names2.s{s2_ind};
+            setNames{i} = '1.0';
+            if keepAllElements
+                c = c+1;
+                elCode{c} = setNames{i};
+            end
         end
         
     end
     
     % Now, concatenate everything together.
     if c > 0
-        if strcmp(mult_type, 'individual')
-            % code.S = sprintf('%s = [%s];', name, strjoin(code.s(1:c), ','));
-            code.S = PSDM.fgen.assignVector( name, code.s(1:c), opt );
-        else
-            v1 = PSDM.fgen.assignVector( strcat(name, '_m1'), code.s_els1(1:c), opt );
-            v2 = PSDM.fgen.assignVector( strcat(name, '_m2'), code.s_els2(1:c), opt );
-            % v1 = sprintf('%s = [%s];', strcat(name, '_m1'), strjoin(code.s_els1(1:c), ','));
-            % v2 = sprintf('%s = [%s];', strcat(name, '_m2'), strjoin(code.s_els2(1:c), ','));
-            v3 = sprintf('%s = %s .* %s;', name, strcat(name, '_m1'), strcat(name, '_m2'));
-            code.S = strjoin({v1, v2, v3}, '\n');
-        end
+        setCode = PSDM.fgen.assignVector( name, elCode(1:c), opt );
     else
-        code.S = '';
+        setCode = '';
     end
     
-    if ~ isempty(code1.S)
-        code.S = sprintf('%s\n\n%s', code1.S, code.S);
+    if exist('set1Code', 'var') &&  ~ isempty(set1Code)
+        setCode = sprintf('%s\n\n%s', set1Code, setCode);
     end
     
-    if ~ isempty(code2.S)
-        code.S = sprintf('%s\n\n%s', code2.S, code.S);
+    if exist('set2Code', 'var') && ~ isempty(set2Code)
+        setCode = sprintf('%s\n\n%s', set2Code, setCode);
     end
-    
-    names.S = name;
-    
+        
 end

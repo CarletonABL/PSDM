@@ -70,9 +70,9 @@ function [E, P] = deriveModel(DH_ext, g_in, X_in, tol_in, v_in)
     
     % Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex && DOF <= 5
+    if coder.target('matlab') && c.allow_mex && DOF <= 6
         try
-            disp("Attempting to use MEX");
+            utils.vprint(v, "Attempting to use MEX.\n");
             [E, P] = PSDM.deriveModel_mex(DH_ext, g, X, tol, v);
             return; 
         catch e

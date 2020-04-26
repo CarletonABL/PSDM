@@ -4,5 +4,6 @@ function c = config
     c.allow_mex = false;
     c.allow_mex_basic = true;
     c.use_iterative_refinement = true;
+    c.do_reprojection_tests = true;
     
 end

@@ -29,9 +29,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
         beCareful = false;
     else
         P1 = P1_in;
-        m = size(Ep, 2);
-        beCareful = ~all(size(P1) == [m, m, DOF]) || ...
-            utils.eqtol(P1, repmat(eye(m), [1 1 DOF]), tol, true);
+        beCareful = true;
     end
     assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
 
@@ -61,15 +59,15 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Number of joint states to test at. Use a number greater than
     % required to reduce error
     Nq = max(round(M*(1.2 + 1*beCareful)), DOF*30);
-    
+
     % Max number of inertial parameters is DOF*10
     Nt = round(DOF * 10);
     
     % Generate samples
-    [Q_stack, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
+    [B_stack, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
     
     % Make Y matrix, transform it with P1, if given
-    Y = PSDM.generateYp(Q_stack, Qd, Qdd, Ep);
+    Y = PSDM.generateYp(B_stack, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
         
     % Solve each regression problem in a loop
@@ -93,16 +91,16 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     % Reduce to minimum parameters. Since we stacked all Theta vectors
     % vertically, the result will be a vertical stacking of the P_inv
     % vectors.
-    % Q_stack = utilities.rref(T', [], true);
+    %  B_stack = utilities.rref(T', [], true);
     c = PSDM.config;
-    Q_stack = utilities.rrefQR(T', [], true, c.use_iterative_refinement);
+    B_stack = utilities.rrefQR(T', [], true, c.use_iterative_refinement);
     
     
     % The rank of the matrix
-    b = size(Q_stack, 1);
+    b = size(B_stack, 1);
     
     % Get the pseudoinverse.
-    P_stack = pinv(Q_stack);
+    P_stack = pinv(B_stack);
     
     % Un-stack the matrix in a loop
     P2 = zeros(M, b, DOF);
@@ -112,33 +110,39 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     
     % Combine P1, P2 into final P matrix
     P = utilities.blockprod(P1, P2);
-
-    %% Double check reprojection error to make sure no errors occured
-        
-    % Transform with P reduction matrices.
-    % Find theta vector for each DOF of matrix
-    %     Ytile = tileArray(Yi, DOF);
-    tau_stack = permute( ...
-                    utilities.vertStack(tau, 2), ...
-                    [1 3 2]);
-
-    Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
-    Tmin = Q_stack * T;
-    
-    % Find reprojection error
-    r = Ymin*Tmin - tau_stack;
-    
-    if any(abs(r) > 1e-3, 'all')
-        if coder.target('matlab')
-            warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
-            keyboard;
-        else
-            fprintf("Reprojection test failed, max reprojection error is %.3g!\n PROCESS FAILED.\n\n", max(abs(r), [], 'all'));
-        end
-    end
     
     % Output information, if required.
-    utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n\t\tReprojection error is %.3g\n", ...
-        int32(size(P1, 1)), int32(M), int32(b), toc(t), max(abs(r), [], 'all'));
+    utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n", ...
+            int32(size(P1, 1)), int32(M), int32(b), toc(t));
+
+    if c.do_reprojection_tests
+        %% Double check reprojection error to make sure no errors occured
+
+        % Transform with P reduction matrices.
+        % Find theta vector for each DOF of matrix
+        tau_stack = permute( ...
+                        utilities.vertStack(tau, 2), ...
+                        [1 3 2]);
+
+        Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
+        Tmin = B_stack * T;
+
+        % Find reprojection error
+        r = Ymin*Tmin - tau_stack;
+
+        if any(abs(r) > 1e-3, 'all')
+            if coder.target('matlab')
+                warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
+                keyboard;
+            else
+                fprintf("Reprojection test failed, max reprojection error is %.3g!\n PROCESS FAILED.\n\n", max(abs(r), [], 'all'));
+            end
+        end
+        
+        utilities.vprint(v, "\t\tReprojection error is %.3g\n", max(abs(r), [], 'all'));
+        
+    end
+    
+    
         
 end

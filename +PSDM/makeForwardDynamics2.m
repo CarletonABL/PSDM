@@ -1,19 +1,18 @@
-function makeInverseDynamics(filename, E, P, Theta, varargin)
+function makeForwardDynamics2(filename, E, P, Theta, varargin)
+    % Parse inputs
 
     p = inputParser;
     p.addOptional('do_mex', false);
     p.addOptional('parallel', false);
-    p.addOptional('tau_type', 'vector');
     p.addOptional('mult_type', 'individual');
     p.addOptional('assign_type', 'vector');
     p.parse(varargin{:});
     opt = p.Results;
-    opt.alg = 'ID';
-
+    opt.alg = 'FD';
+    
     DOF = size(P, 3);
     
     %% Make base code
-    
     [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, Theta, opt);
     [vars, names, code] = PSDM.fgen.makePhiCode(vars, names, code, 'Phi_b', opt);
     [vars, names, code] = PSDM.fgen.makeUpsilonCode(vars, names, code, opt);
@@ -26,16 +25,18 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     [funcDir, funcName, ~] = fileparts(filename);
     
     dir = fileparts(mfilename('fullpath'));
-    funcText = fileread( fullfile(dir, 'templates', 'inverseDynamics.m') );
+    funcText = fileread( fullfile(dir, 'templates', 'forwardDynamics.m') );
     
-    funcText = strrep(funcText, '%SETUP_CODE%', code.setup);
+    funcText = strrep(funcText, '%SETUP1_CODE%', code.setup1);
+    funcText = strrep(funcText, '%SETUP2_CODE%', code.setup2);
     funcText = strrep(funcText, '%UP_CODE%', code.Up);
     funcText = strrep(funcText, '%A_CODE%', code.A);
     funcText = strrep(funcText, '%Y_CODE%', code.Y);
     funcText = strrep(funcText, '%PHI_CODE%', code.Phi);
     funcText = strrep(funcText, '%TAU_CODE%', code.tau);
-    funcText = strrep(funcText, 'function tau = inverseDynamics(Q, Qd, Qdd)', ...
-        sprintf('function tau = %s(Q, Qd, Qdd)', funcName));
+    funcText = strrep(funcText, 'DOF', sprintf('%d', DOF));
+    funcText = strrep(funcText, 'function Qdd = forwardDynamics(Q, Qd, tau)', ...
+        sprintf('function Qdd = %s(Q, Qd, tau)', funcName));
     funcText = strrep(funcText, '%p%', ...
         sprintf('%d', size(E,2)));
     
@@ -58,16 +59,12 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         fprintf("Compiling into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
-        if ~opt.use_gpu
-            cfg = coder.config('mex');
-            cfg.GenerateReport = true;
-            cfg.ReportPotentialDifferences = false;
-            cfg.IntegrityChecks = false;
-            cfg.ResponsivenessChecks = false;
-            cfg.ExtrinsicCalls = false;
-        else
-            cfg = coder.gpuConfig('mex');
-        end
+        cfg = coder.config('mex');
+        cfg.GenerateReport = true;
+        cfg.ReportPotentialDifferences = false;
+        cfg.IntegrityChecks = false;
+        cfg.ResponsivenessChecks = false;
+        cfg.ExtrinsicCalls = false;
 
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
@@ -77,7 +74,6 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         ARGS{1}{3} = coder.typeof(0,[DOF Inf],[0 1]);
         
         cdir = pwd;
-        idir = fullfile(dir, '..');
         compileName = fullfile(funcDir, funcName);
         cd(funcDir)
         codegen(compileName,'-config', cfg, '-args', ARGS{1})
@@ -86,4 +82,19 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         
     end
     
+end
+
+
+function UpCode = makeUpAccel( Up_accel_i, UpName, Up1, Up1names )
+
+    Mi = size(Up_accel_i, 2);
+    Up_accel_i_els = repelem({''}, Mi);
+
+    for j = 1:Mi
+        Up_ind = find( all( Up1 == Up_accel_i(:, j) ), 1);
+        Up_accel_i_els{j} = Up1names{Up_ind};
+    end
+    
+    UpCode = sprintf('%s = [%s];', UpName, strjoin(Up_accel_i_els, ','));
+
 end
