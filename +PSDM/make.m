@@ -174,8 +174,8 @@ function make(functions)
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
         ARGS{1} = cell(6,1);
-        ARGS{1}{1} = coder.typeof(uint8(0),[40 10000],[1 1]); % E
-        ARGS{1}{2} = coder.typeof(0,[10000  100   10],[1 1 1]); % P
+        ARGS{1}{1} = coder.typeof(uint8(0),[40 100000],[1 1]); % E
+        ARGS{1}{2} = coder.typeof(0,[100000  100   10],[1 1 1]); % P
         ARGS{1}{3} = coder.typeof(0,[100  1],[1 0]); % Theta
         ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]); % Q
         ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]); % Qd
@@ -183,6 +183,38 @@ function make(functions)
 
         cd(fullfile(path, '+PSDM'));
         codegen -config cfg -I path +PSDM/forwardDynamics -args ARGS{1}
+
+        cd(path);
+        fprintf("Done!\n");
+        
+    end
+    
+    %% inverseDynamics
+    
+    if any(strcmp(functions, 'inverseDynamics')) || any(strcmp(functions, 'all'))
+    
+        fprintf("Compiling PSDM.inverseDynamics into mex file... ");
+
+        % Create configuration object of class 'coder.MexCodeConfig'.
+        cfg = coder.config('mex');
+        cfg.GenerateReport = true;
+        cfg.ReportPotentialDifferences = false;
+        cfg.IntegrityChecks = false;
+        cfg.ResponsivenessChecks = false;
+        cfg.ExtrinsicCalls = false;
+
+        % Define argument types for entry-point 'genTestPoses'.
+        ARGS = cell(1,1);
+        ARGS{1} = cell(6,1);
+        ARGS{1}{1} = coder.typeof(uint8(0),[40 100000],[1 1]); % E
+        ARGS{1}{2} = coder.typeof(0,[100000  100   10],[1 1 1]); % P
+        ARGS{1}{3} = coder.typeof(0,[100  1],[1 0]); % Theta
+        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]); % Q
+        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]); % Qd
+        ARGS{1}{6} = coder.typeof(0,[10 Inf],[1 1]); % Qdd
+
+        cd(fullfile(path, '+PSDM'));
+        codegen -config cfg -I path +PSDM/inverseDynamics -args ARGS{1}
 
         cd(path);
         fprintf("Done!\n");

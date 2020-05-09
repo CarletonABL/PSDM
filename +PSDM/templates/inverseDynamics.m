@@ -1,20 +1,21 @@
 function tau = inverseDynamics(Q, Qd, Qdd)
 
-g = vertcat( Q, sin(Q), cos(Q), Qd, Qdd);
-
 N = size(Q, 2);
 DOF = size(Q, 1);
 
-tau = zeros(DOF, N);
+tau = coder.nullcopy(zeros(DOF, N));
 
-%SETUP_CODE%
+%SETUP1_CODE%
 
 %PHI_CODE%
 
 for i = 1:N
-    
-gi1 = g(colMask, i);
-gi2 = gi1(squareMask).^2;
+
+Qi = Q(:, i);
+Qdi = Qd(:, i);
+Qddi = Qdd(:, i);
+gi = vertcat( Qi, sin(Qi), cos(Qi), Qdi, Qddi);
+%SETUP2_CODE%
    
 %UP_CODE%
 

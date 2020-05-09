@@ -6,6 +6,7 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     p.addOptional('tau_type', 'vector');
     p.addOptional('mult_type', 'individual');
     p.addOptional('assign_type', 'vector');
+    p.addOptional('allow_open_mp', true);
     p.parse(varargin{:});
     opt = p.Results;
     opt.alg = 'ID';
@@ -28,7 +29,8 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     dir = fileparts(mfilename('fullpath'));
     funcText = fileread( fullfile(dir, 'templates', 'inverseDynamics.m') );
     
-    funcText = strrep(funcText, '%SETUP_CODE%', code.setup);
+    funcText = strrep(funcText, '%SETUP1_CODE%', code.setup1);
+    funcText = strrep(funcText, '%SETUP2_CODE%', code.setup2);
     funcText = strrep(funcText, '%UP_CODE%', code.Up);
     funcText = strrep(funcText, '%A_CODE%', code.A);
     funcText = strrep(funcText, '%Y_CODE%', code.Y);
@@ -58,16 +60,15 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         fprintf("Compiling into mex file... ");
 
         % Create configuration object of class 'coder.MexCodeConfig'.
-        if ~opt.use_gpu
-            cfg = coder.config('mex');
-            cfg.GenerateReport = true;
-            cfg.ReportPotentialDifferences = false;
-            cfg.IntegrityChecks = false;
-            cfg.ResponsivenessChecks = false;
-            cfg.ExtrinsicCalls = false;
-        else
-            cfg = coder.gpuConfig('mex');
-        end
+        cfg = coder.config('mex');
+        cfg.GenerateReport = true;
+        cfg.ReportPotentialDifferences = false;
+        cfg.IntegrityChecks = false;
+        cfg.ResponsivenessChecks = false;
+        cfg.ExtrinsicCalls = false;
+        cfg.EnableOpenMP = opt.allow_open_mp;
+        cfg.MATLABSourceComments = true;
+        cfg.PreserveVariableNames = 'UserNames';
 
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
@@ -77,7 +78,6 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         ARGS{1}{3} = coder.typeof(0,[DOF Inf],[0 1]);
         
         cdir = pwd;
-        idir = fullfile(dir, '..');
         compileName = fullfile(funcDir, funcName);
         cd(funcDir)
         codegen(compileName,'-config', cfg, '-args', ARGS{1})

@@ -37,8 +37,13 @@ function [vars, names, code] = makeTauCode(vars, names, code, opt)
                     continue;
                 end
                 c = c+1;
-                code.D_ij{c} = sprintf('D(%d, %d) = Yacc_%d%d * Phi_acc_%d%d;', ...
-                                       i, j, i, j, i, j);
+                if ~isempty( vars.Phi_acc_ij{i, j} )
+                    code.D_ij{c} = sprintf('D(%d, %d) = Yacc_%d%d * Phi_acc_%d%d;', ...
+                                           i, j, i, j, i, j);
+                else
+                    code.D_ij{c} = sprintf('D(%d, %d) = 0.0;', i, j);
+                end
+                
                 % Assign the other half now too
                 if i ~= j
                     code.D_ij{c} = sprintf('%s\nD(%d, %d) = D(%d, %d);', ...

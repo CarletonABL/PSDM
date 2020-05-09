@@ -1,7 +1,7 @@
 function [vars, names, code] = makePhiCode(vars, names, code, PhiName, opt)
     % MAKEPTHETACODE Generates the code for defining PTheta in a function
 
-    tol = 1e-10;
+    tol = 1e-11;
     
     % Get vars
     DOF = vars.DOF;
@@ -82,8 +82,11 @@ function [vars, names, code] = makePhiCode(vars, names, code, PhiName, opt)
                 end
 
                 % Calculate code
-                c = c+1;
-                code.Phi_acc_ij{c} = sprintf('Phi_acc_%d%d = coder.const(%s);', i, j, mat2str( Phi_acc_i{i}(Phi_acc_i_mask{i}(:, j), j)) );
+                vars.Phi_acc_ij{i, j} = Phi_acc_i{i}(Phi_acc_i_mask{i}(:, j), j);
+                if ~isempty(vars.Phi_acc_ij{i, j})
+                    c = c+1;
+                    code.Phi_acc_ij{c} = sprintf('Phi_acc_%d%d = coder.const(%s);', i, j, mat2str( vars.Phi_acc_ij{i, j} ) );
+                end
             end
 
         end

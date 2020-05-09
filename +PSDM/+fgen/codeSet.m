@@ -73,7 +73,11 @@ function [setNames, setCode] = codeSet(Su, name, keepAllElements, opt, ...
     if c > 0
         setCode = PSDM.fgen.assignVector( name, elCode(1:c), opt );
     else
-        setCode = '';
+        if keepAllElements
+            setCode = sprintf('%s = 1.0;', name);
+        else
+            setCode = '';
+        end
     end
     
     if exist('set1Code', 'var') &&  ~ isempty(set1Code)

@@ -1,10 +1,11 @@
 function Qdd = forwardDynamics(Q, Qd, tau)
 
-g = vertcat( Q, sin(Q), cos(Q), Qd);
-
 N = size(Q, 2);
+assert(size(Q, 2)>=1);
+assert(size(Qd, 2)>=1);
+assert(size(tau, 2)>=1);
 
-Qdd = zeros(DOF, N);
+Qdd = coder.nullcopy(zeros(DOF, N));
 tau_ind = coder.nullcopy(zeros(DOF, 1));
 D = coder.nullcopy(zeros(DOF, DOF));
 
@@ -14,7 +15,10 @@ D = coder.nullcopy(zeros(DOF, DOF));
 
 for i = 1:N
 
-gi = g(:, i);
+Qi = Q(:, i);
+Qdi = Qd(:, i);
+Qddi = Qdd(:, i);
+gi = vertcat( Qi, sin(Qi), cos(Qi), Qdi, Qddi);
 %SETUP2_CODE%
 
 

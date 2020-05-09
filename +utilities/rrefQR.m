@@ -44,18 +44,18 @@ function Prref = rrefQR(A, tol_in, compact_in, use3p_in)
 
     % Form P1, P2 matrices
     coder.extrinsic('utilities.mldivide2');
-    P1 = eye(b);
+    B1 = eye(b);
     if use3p
-        P2 = coder.nullcopy( zeros( size(R1, 1), size(R2, 2) ) );
-        P2 = utilities.mldivide2(R1, R2);
+        B2 = coder.nullcopy( zeros( size(R1, 1), size(R2, 2) ) );
+        B2 = utilities.mldivide2(R1, R2);
     else
-        P2 = R1 \ R2;
+        B2 = R1 \ R2;
     end
 
     % Concat and sort into P
     P = zeros(size(Rt));
-    P(:, rowMask) = P1( p_trim, :);
-    P(:, ~rowMask) = P2( p_trim, :);
+    P(:, rowMask) = B1( p_trim, :);
+    P(:, ~rowMask) = B2( p_trim, :);
     P(:, p) = P;
 
     if ~ compact && m > b

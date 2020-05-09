@@ -86,15 +86,14 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     end
         
     T = utilities.vertStack(Ti, 3);
-    
-    
+        
     % Reduce to minimum parameters. Since we stacked all Theta vectors
     % vertically, the result will be a vertical stacking of the P_inv
     % vectors.
     %  B_stack = utilities.rref(T', [], true);
     c = PSDM.config;
+    % B_stack = utilities.rrefQR2(T', c.use_iterative_refinement);
     B_stack = utilities.rrefQR(T', [], true, c.use_iterative_refinement);
-    
     
     % The rank of the matrix
     b = size(B_stack, 1);
