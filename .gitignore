@@ -23,7 +23,7 @@ scripts/
 save_data/*
 
 # Ignore config file
-\+PSDM/config.m
+*config.m
 
 !temp/README*
 
