@@ -23,6 +23,9 @@ scripts/
 save_data/*
 \+PSDM_v1
 
+# Ignore config file
++PSDM/config.m
+
 !temp/README*
 
 # Ignore simulink real time folders

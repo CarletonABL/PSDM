@@ -1,12 +1,12 @@
-function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
-    % MLDIVIDE2 Computes the least squares solution to A\b, however it
+function x = linsolve(A, b, niter, useSymbolic, exitTolerance)
+    % LINSOLVE Computes the least squares solution to A\b, however it
     % "recovers" the final digits of the computation using iteration with
     % newton's method and triple-precision residual calculations.
     %
-    %   x = utils.mldivide2(A, b) Computes the least squares solution to
+    %   x = utils.linsolve(A, b) Computes the least squares solution to
     %       A\b with 2 iterative improvement steps using triple precision.
     %
-    %   x = utils.mldivide2(A, b, niter, useSymbolic, exit_tolerance)
+    %   x = utils.linsolve(A, b, niter, useSymbolic, exit_tolerance)
     %       specifies the full algorithm options. 
     %       *   niter is the maximum number of iterations to do
     %           (default: 1). 
@@ -15,7 +15,8 @@ function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
     %           produces very accurate results but is much slower and
     %           requires much more memory. Default: false.
     %       *   exit_tolerance: tolerance between improvement in steps
-    %           before the algorithm auto-exits early.
+    %           before the algorithm auto-exits early. Default:
+    %           eps(class(A)).
     %
     % See also: utils.dot3p, utils.residual3p
     
@@ -31,12 +32,20 @@ function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
     end
     
     %% Start function
-    
+    coder.extrinsic('linsolve_base')
+    x = coder.nullcopy(zeros(size(A, 2), size(b, 2)));
+    x = linsolve_base(A, b, niter, useSymbolic, exitTolerance);
+
+end
+
+
+function x = linsolve_base(A, b, niter, useSymbolic, exitTolerance)
+
     % Define some variables
     tol2 = exitTolerance^2;
     
     % Decompose A so that we don't have to resolve everything every time
-    dA = decomposition(A, 'CheckCondition',false);
+    dA = decomposition(A, 'CheckCondition', false);
     
     % Get an initial solution
     x = dA\b;
@@ -49,7 +58,7 @@ function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
         if useSymbolic && coder.target('matlab')
             r = double(A*sym(x,'f') - b);
         else
-            r = utilities.residual3p(A, x, b);
+            r = utils.residual3p(A, x, b);
         end
         
         d = dA \ r;
@@ -70,8 +79,4 @@ function [x, c] = mldivide2(A, b, niter, useSymbolic, exitTolerance)
         
     end
     
-    if nargout > 1
-        c = rcond(dA)^-1;
-    end
-
 end

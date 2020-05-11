@@ -1,18 +1,18 @@
-function C = blockprod(A_in, B_in)
+function C = blockprod(A, B)
     % BLOCKPROD Multiplies two matrices or vectors element-wise along
     % dimension 3. Note, this can likely be done more efficiently. If
     % codegen is done it shouldn't be too bad.
     
-    assert(size(A_in, 3) == size(B_in, 3) || ...
-           size(B_in, 3) == 1 || ...
-           size(A_in, 3) == 1, "B and A must have the same dimension 3");
+    assert(size(A, 3) == size(B, 3) || ...
+           size(B, 3) == 1 || ...
+           size(A, 3) == 1, "B and A must have the same dimension 3");
        
-    assert(size(A_in, 2) == size(B_in, 1), "Matrices cannot be multiplied!");
+    assert(size(A, 2) == size(B, 1), "Matrices cannot be multiplied!");
         
     % Else, try to use mex, catch otherwise
     if coder.target('matlab')
         try
-            C = utilities.blockprod_mex(A_in, B_in);
+            C = utilities.blockprod_mex(A, B);
             return;
         catch e
             warning("utilities not compiled. You should run utilities.make!");
@@ -20,24 +20,40 @@ function C = blockprod(A_in, B_in)
         end
     end
     
-    N = max( size(A_in, 3), size(B_in, 3) );
+    N = max( size(A, 3), size(B, 3) );
     
-    C = zeros(size(A_in, 1), size(B_in, 2), N);
+    C = zeros(size(A, 1), size(B, 2), N);
     
-    if size(A_in, 3) == 1
-        A = repmat(A_in, [1 1 N]);
+    single_A = size(A, 3) == 1;
+    single_B = size(B, 3) == 1;
+    
+    Ai = A(:, :, 1);
+    Bi = B(:, :, 1);
+    
+    % Multiply out in a loop. Use parallel computing if compiled code.
+    if coder.target('matlab')
+        for i = 1:N
+
+            if single_A
+                C(:, :, i) = A * B(:, :, i);
+            elseif single_B
+                C(:, :, i) = A(:, :, i) * B;
+            else
+                C(:, :, i) = A(:, :, i) * B(:, :, i);
+            end
+
+        end
     else
-        A = A_in;
+        parfor i = 1:N
+
+            if single_A
+                C(:, :, i) = Ai * B(:, :, i);
+            elseif single_B
+                C(:, :, i) = A(:, :, i) * Bi;
+            else
+                C(:, :, i) = A(:, :, i) * B(:, :, i);
+            end
+
+        end
     end
-    
-    if size(B_in, 3) == 1
-        B = repmat(B_in, [1 1 N]);
-    else
-        B = B_in;
-    end
-    
-    for i = 1:N
-        C(:, :, i) = A(:, :, i) * B(:, :, i);
-    end
-    
 end
