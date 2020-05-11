@@ -24,7 +24,7 @@ save_data/*
 \+PSDM_v1
 
 # Ignore config file
-+PSDM/config.m
+\+PSDM/config.m
 
 !temp/README*
 
