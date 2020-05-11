@@ -21,7 +21,6 @@ scripts/
 *.autosave
 *.asv
 save_data/*
-\+PSDM_v1
 
 # Ignore config file
 \+PSDM/config.m
@@ -40,9 +39,6 @@ save_data/*
 *.prj
 
 *.DS_store
-
-# Ignore files starting with a * (personal preference)
-\**
 
 # Ignore sublime folders
 *.sublime-project
