@@ -1,0 +1,243 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{pifont}
+\usepackage{natbib}
+\usepackage{geometry}
+\usepackage{fleqn}
+\usepackage{txfonts}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[procnames]{listings}
+\usepackage{color}
+\usepackage{placeins}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{soul}
+%\usepackage{multicol}
+\usepackage{cleveref}
+\usepackage{fancyvrb}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\graphicspath{ {img/} }
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\pdfminorversion=6
+\newcommand{\btheta}{\bm{\uptheta}}
+
+% Spaces% Math shortcuts
+\renewcommand{\b}[1]{\mathbf{#1}}
+\newcommand{\bg}[1]{\bm{#1}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\transpose}{\mathsf{T}}
+\newcommand{\grad}[1]{{\nabla}#1}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\sign}{\operatorname{sign}}
+\newcommand{\diag}[1]{\operatorname{diag}\left[#1\right]}
+\renewcommand{\frame}[3]{\,^{#2\hspace{-0.05em}}#1_{#3}}
+\def\multiset#1#2{\ensuremath{\left(\kern-.3em\left(\genfrac{}{}{0pt}{}{#1}{#2}\right)\kern-.3em\right)}}
+
+\setcounter{MaxMatrixCols}{20}
+
+% Common symbol shortcuts
+\newcommand{\bx}{\b{x}}
+\newcommand{\q}{\b{q}}
+\newcommand{\qd}{\b{\dot{q}}}
+\newcommand{\qdd}{\b{\ddot{q}}}
+\newcommand{\btau}{\bm{\uptau}}
+\newcommand{\bD}{\b{D}}
+\newcommand{\bDq}{\b{D}(\q)}
+\newcommand{\bC}{\b{C}}
+\newcommand{\bCq}{\b{C}(\q, \qd)}
+\newcommand{\bG}{\b{G}}
+\newcommand{\bGq}{\bG(\q)}
+\newcommand{\bTheta}{\b{\Theta}}
+\newcommand{\bY}{\b{Y}}
+\newcommand{\bYq}{\bY(\q, \qd, \qdd)}
+\newcommand{\bX}{\b{X}}
+\newcommand{\bXi}{\bX_i}
+\newcommand{\bE}{\b{E}}
+\newcommand{\bP}{\b{P}}
+\newcommand{\bB}{\b{B}}
+\newcommand{\bPhi}{\b{\Phi}}
+\newcommand{\br}{\b{r}}
+\newcommand{\bJ}{\b{J}}
+\newcommand{\bJq}{\b{J}(\q)}
+\newcommand{\bJv}{\b{J_v}}
+\newcommand{\bJvq}{\b{J_v(\q)}}
+\newcommand{\bJw}{\b{J_\omega}}
+\newcommand{\bJwq}{\b{J_\upomega(\q)}}
+\newcommand{\bT}{\b{T}}
+\newcommand{\T}[2]{\frame{\bT}{#1}{#2}}
+\newcommand{\bR}{\b{R}}
+\newcommand{\bz}{\b{z}}
+\newcommand{\bI}{\b{I}}
+\renewcommand{\bP}{\b{P}}
+\newcommand{\bgamma}{\bm{\upgamma}}
+\newcommand{\nminus}{\hspace{-0.75em}}
+\newcommand{\wrench}[1]{\mathbbm{#1}}
+
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
+
+%opening
+\title{README -- PSDM Matlab Code Package}
+\author{Steffan Lloyd (steffan.lloyd@carleton.ca)}
+
+\begin{document}
+
+\maketitle
+
+PSDM is a numerical method of deriving the equations of motion of an arbitrary rigid body chain, in regressor form. It is an alternative means of deriving the equations of motion for a rigid, serial kinematic chain. The result is a numerically represented model in a highly organized form, which allows for many symbolic manipulations through numerical methods. This allows for
+
+\begin{enumerate}[itemsep=0pt]
+ \item The generation of very fast real time code.
+ \item Automatic model simplification (to achieve faster evaluation times)
+ \item Both forward and inverse dynamic modelling in a single derivation and with the same inertial parameter set.
+\end{enumerate}
+
+To use PSDM, you need to first derive a PSDM model. This will return an \textit{exponent matrix} $\mathbf{E}$ and a \textit{reduction page matrix} $\mathbf{P}$. These matrices contain the full information to compute the forward and inverse dynamic model, as
+\begin{align}\label{eq:ID}
+	\tau_i = \mathbf{y}_p(\q, \qd, \qdd) \, \bP_i \, \mathbf{\Theta}_b,
+\end{align}
+and $\b{y}_p(\q, \qd, \qdd)$ can be calculated from $\bE$ as
+\begin{align}
+		y_j(\q, \qd, \qdd) = \prod_{i=1}^{5n} \Big[\gamma_i(\q, \qd, \qdd)\Big]^{e_{i,j}}, \quad e_{i,j} \in \big\{0, 1, 2\big\},\\
+		\b{\gamma}(\q, \qd, \qdd) = \begin{bmatrix}\q^\transpose & \sin(\q)^\transpose & \cos(\q)^\transpose & \qd^\transpose & \qdd ^\transpose \end{bmatrix}^\transpose,
+\end{align}
+
+\section{Derivation}
+
+Derivation of the PSDM model can be accomplished in a single line of code with one of two calling syntaxes. 
+
+\begin{lstlisting}
+% Can derive model from a DH table and a gravity vector.
+[E, P] = PSDM.deriveModel(DH, g);
+
+% Or, can instead give an anonymous function which evaluates the 
+% inverse dynamics of the manipulator.
+[E, P] = PSDM.deriveModel(@inverseDynamicsFunc, jointTypes);
+\end{lstlisting}
+
+\subsection{Kinematic Calling Syntax}
+If the DH / g syntax is used, the DH table should be given as a $n\times 6$ matrix:
+\begin{align}
+	\text{DH} = \begin{bmatrix}
+		a_1 & \alpha_1 & d_1 & \theta_1 & t_1 & s_1\\
+		\vdots &\vdots &\vdots &\vdots &\vdots &\vdots\\
+		a_n & \alpha_n & d_n & \theta_n & t_n & s_n
+	\end{bmatrix}
+\end{align}
+where the DH variables are as defined by \cite{spong2008}:
+\begin{enumerate}[itemsep=0pt]
+	\item $a_i$ is the distance along the x axis from frame $o_{i-1}$ to $o_i$;
+	\item $\alpha_i$ is the angular rotation about $x_i$ from $o_{i-1}$ to $o_i$;
+	\item $d_i$ is the linear displacement along the $z$-axis from $o_{i-1}$ to $o_i$;
+	\item $\theta_i$ the angular rotation about the $z$-axis from $o_{i-1}$ to $o_i$;
+	\item $t_i$ is a number representing the joint type -- 0 indicates a revolute joint, 1 indicates a prismatic joint
+	\item $s_i$ is either -1 or 1, denoting the direction of the joint.
+\end{enumerate}
+The variables $t_i$ and $s_i$ are combined such that, for each joint, we have
+\begin{align}
+	d_i^* &= d_i + t_i s_i q_i &
+	\theta_i^* &= \theta_i + (1-t_i)s_i q_i
+\end{align}
+The gravity vector is a unit vector which points "upwards" (i.e. against gravity). If omitted, a gravity vector of
+\begin{align}
+	\mathbf{g} = \begin{bmatrix} 0 & 0 & 1\end{bmatrix}^T
+\end{align}
+is assumed, i.e. that the $z$-axis points directly upwards against gravity.
+
+\subsection{Implicit model simplifications}
+A third parameter $\mathbf{X}$ can also be supplied, which represents the inertial parameters of the robot, in the following form:
+\begin{align}
+	\b{X} = \begin{bmatrix}
+		m_1 & r_{x,1} & r_{y,1} & r_{z,1} & I_{xx,1} & I_{yy,1} & I_{zz,1} & I_{xy,1} & I_{xz,1} & I_{yz,1}\\
+		\vdots &\vdots &\vdots &\vdots &\vdots &\vdots&\vdots&\vdots&\vdots&\vdots\\
+		m_n & r_{x,n} & r_{y,n} & r_{z,n} & I_{xx,n} & I_{yy,n} & I_{zz,n} & I_{xy,n} & I_{xz,n} & I_{yz,n}\\
+	\end{bmatrix}
+\end{align}
+where
+\begin{itemize}[itemsep=0pt]
+	\item $m_i$ is the mass of link $i$;
+	\item $r_{x,i}$, $r_{y,i}$, $r_{z,i}$ are the (x,y,z) position of the center of gravity of the link;
+	\item $I_{xx,i}$, $I_{yy,i}$, $I_{zz,i}$, $I_{xy,i}$, $I_{xz,i}$, $I_{yz,i}$ are the principle and cross inertia terms of the link, centered at the center of gravity and aligned with the main coordinate system of the link.
+\end{itemize}
+Note, if supplied, the numerical values of this variable are not actually used. However, any parameter which is given as \textit{identically} zero will be implicitely numerically ignored by the algorithm, resulting in a simpler equation. If omitted, the algorithm will simply assume all parameters are nonzero.
+
+\subsection{Function calling syntax}
+
+If you do not have a DH table of the robot, but instead have access to some dynamic simulation of your manipulator, you can still use PSDM if you can define an anonymous function `@inverseDynamicsFunc` which allows the algorithm to sample the joint torques for any joint states and inertial parameters, as
+\begin{lstlisting}
+tau = inverseDynamicsFunc(Q, Qd, Qdd, X)
+\end{lstlisting}
+where \texttt{tau}, \texttt{Q}, \texttt{Qd}, \texttt{Qdd} are $n \times N$ matrices ($n$ degrees of freedom, $N$ samples), and $\mathbf{X}$ is an inertia parameter matrix as defined above.
+
+\subsection{Additional Options}
+
+Additionally, the following name/value pairs can be supplied:
+\begin{itemize}[itemsep=0pt]
+	\item \texttt{tolerance}: A tolerance used in the ID. Any factors below this tolerance (in estimation of the torques) is ignored. Defaut: \texttt{1e-10}.
+	\item \texttt{verbose}: A verbosity flag. Set to false to suppress output. Default: \texttt{true}.
+	\item \texttt{gravity\_only}: If true, the algorithm will ignore all acceleration  and velocity effects. Default: \texttt{false}.
+\end{itemize}
+
+\section{Using the PSDM Model}
+
+\subsection{Determining the Parameter Vector}
+
+Once the PSDM model has been derived, it can be used as follows. First, the minimal parameter vector $\b{\Theta}_b$ must be determined. A regression of \cref{eq:ID} can be used for this, using either numerical or experimental data. To determine $\b{\Theta}_b$ using numerical data, the following function can be used as
+\begin{lstlisting}
+% Using the DH and g syntax
+Theta = PSDM.X2Theta(DH, g, X, opt)
+% Or using the functional syntax
+Theta = PSDM.X2Theta(inverseDynamicsFunc, linkTypes, X, opt)
+\end{lstlisting}
+
+\subsection{Forward and Inverse Dynamics}
+
+With a parameter vector defined, the forward and inverse dynamics can be evaluated with the functions
+\begin{lstlisting}
+tau = PSDM.inverseDyanmics(E, P, Theta, Q, Qd, Qdd)
+Qdd = PSDM.forwardDynamics(E, P, Theta, Q, Qd, tau)
+\end{lstlisting}
+
+\subsection{Fast Real-Time Code Generation}
+The functions \texttt{PSDM.inverseDynamics} and \texttt{PSDM.forwardDynamics} work fine, but are slow. Dedicated fast functions can be automatically generated from a model as
+\begin{lstlisting}
+PSDM.makeInverseDynamics(filename, E, P, Theta)
+PSDM.makeForwardDynamics(filename, E, P, Theta)
+\end{lstlisting}
+This will generate a matlab function defined as per the name given in the \texttt{filename} variable, with many optimizations done. This code can also be compiled into C code by giving additional options to the above functions. The generated functions are very fast.
+
+\subsection{Complexity Reduction}
+This codebase also includes tools to reduce the complexity of the model without significantly reducing model quality. The usage of this is summarized in the help text of the function
+\begin{lstlisting}
+[Eh, Ph] = PSDM.reduceModelComplexity(DH, g, X, E, P, options)
+% Or, using the function syntax
+[Eh, Ph] = PSDM.reduceModelComplexity(inverseDynamicsFunc, linkTypes, E, P, options)
+\end{lstlisting}
+
+\section{Examples}
+
+Several examples are given for common manipulators, including
+\begin{enumerate}[itemsep=0pt]
+	\item Two-link planar manipulator;
+	\item SCARA robot;
+	\item KUKA KR6 spherical wrist 6-DOF manipulator;
+	\item KUKA LBR7 7-DOF robot.
+\end{enumerate}
+Photos and numbers are given in the appropriately named scripts in the \texttt{examples} folder.
+
+\section{Crediting and Contact}
+
+This software is developped by Steffan Lloyd (email steffan.lloyd@carleton.ca). The code is offered ``as is'' and can be used at the risk of the user.
+
+If you use our work in a project, we ask that you credit us appropriately (through a citation or otherwise). Citation information will be posted once our manuscript on the subject is published.
+
+\bibliographystyle{sageh}
+\bibliography{library.bib}
+
+\end{document}
