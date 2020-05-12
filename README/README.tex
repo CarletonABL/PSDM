@@ -220,6 +220,17 @@ This codebase also includes tools to reduce the complexity of the model without 
 [Eh, Ph] = PSDM.reduceModelComplexity(inverseDynamicsFunc, linkTypes, E, P, options)
 \end{lstlisting}
 
+\section{Making PSDM Code}
+
+Many of the functions in PSDM run fairly slow in interpreted Matlab code. These can be sped up by compiling them into MEX files, if the user has Matlab Coder installed.
+
+To do this, run the command:
+\begin{lstlisting}
+PSDM.make();
+\end{lstlisting}
+
+This will compile many of the PSDM functions into mex files. Then, to tell the package to ``use'' the mex files, you need to modify the file \texttt{+PSDM/config.m} such that the \texttt{use\_mex} parameter is \texttt{true}.
+
 \section{Examples}
 
 Several examples are given for common manipulators, including
@@ -228,7 +239,7 @@ Several examples are given for common manipulators, including
 	\item SCARA robot;
 	\item KUKA KR6 spherical wrist 6-DOF manipulator;
 	\item KUKA LBR7 7-DOF robot.
-\end{enumerate}
+\end{enumerate}\vspace{1em}
 Photos and numbers are given in the appropriately named scripts in the \texttt{examples} folder.
 
 \section{Crediting and Contact}
