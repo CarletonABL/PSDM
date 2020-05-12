@@ -33,12 +33,12 @@ If the DH / g syntax is used, the DH table should be given as a DOF x 6 matrix:
 
 where the DH variables are as defined by Spong et al (2008):
 
- - $a_i$ is the distance along the x axis from frame $o_{i-1}$ to $o_i$;
- - $\alpha_i$ is the angular rotation about $x_i$ from $o_{i-1}$ to $o_i$;
- - $d_i$ is the linear displacement along the $z$-axis from $o_{i-1}$ to $o_i$;
- - $\theta_i$ the angular rotation about the $z$-axis from $o_{i-1}$ to $o_i$;
- - $t_i$ is a number representing the joint type -- 0 indicates a revolute joint, 1 indicates a prismatic joint
- - $s_i$ is either -1 or 1, denoting the direction of the joint.
+ - ![a_i](https://render.githubusercontent.com/render/math?math=a_i) is the distance along the ![x](https://render.githubusercontent.com/render/math?math=x)-axis from frame ![o_i-1](https://render.githubusercontent.com/render/math?math=o_{i-1}) to ![o_i](https://render.githubusercontent.com/render/math?math=o_i);
+ - ![alpha_1](https://render.githubusercontent.com/render/math?math=\alpha_i) is the angular rotation about ![x](https://render.githubusercontent.com/render/math?math=x)-axis from ![o_i-1](https://render.githubusercontent.com/render/math?math=o_{i-1}) to ![o_i](https://render.githubusercontent.com/render/math?math=o_i);
+ - ![d_i](https://render.githubusercontent.com/render/math?math=d_i) is the linear displacement along the ![z](https://render.githubusercontent.com/render/math?math=z)-axis from ![o_i-1](https://render.githubusercontent.com/render/math?math=o_{i-1}) to ![o_i](https://render.githubusercontent.com/render/math?math=o_i);
+ - ![theta_i](https://render.githubusercontent.com/render/math?math=\theta_i) the angular rotation about the ![z](https://render.githubusercontent.com/render/math?math=z)-axis from ![o_i-1](https://render.githubusercontent.com/render/math?math=o_{i-1}) to ![o_i](https://render.githubusercontent.com/render/math?math=o_i);
+ - ![t_i](https://render.githubusercontent.com/render/math?math=t_i) is a number representing the joint type - 0 indicates a revolute joint, 1 indicates a prismatic joint
+ - ![s_i](https://render.githubusercontent.com/render/math?math=s_i) is either -1 or 1, denoting the direction of the joint.
 
 The variables $t_i$ and $s_i$ are combined such that, for each joint, we have
 $$
