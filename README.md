@@ -15,4 +15,3 @@ If you use our work, we ask that you cite us appropriately in any work. This wor
 
 ## Contact
 Author: Steffan Lloyd (Steffan.Lloyd@carleton.ca).
->>>>>>> 8d23bffe73bcf7e33c6098ddd786a83b2e9218a4
