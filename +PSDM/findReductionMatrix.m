@@ -1,30 +1,23 @@
-function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_in)
+function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     % FINDREDUCTIONMATRIX Identifies linear dependencies in the theta vector of
     % an exponent map E and robot defined by the tuple {DH_ext, X, g}.
     % If the map E is already reduced by a matrix P, supply that as P1.
     %
-    % P = findReductionMatrix(DH_ext, X, g, Ep, idType, P1, tol,  v)
+    % P = findReductionMatrix(robot, Ep, idType, P1, opt)
 
     %% Process inputs
     
-    DOF = size(DH_ext, 1);
+    DOF = robot.DOF;
     
     % Parse idType
-    if nargin < 5 || isempty(idType_in)
+    if nargin < 3 || isempty(idType_in)
         idType = 'gravity';
     else
         idType = idType_in;
     end
-    
-    % Parse tolerance
-    if nargin < 7 || isempty(tol_in)
-        tol = 1e-12;
-    else
-        tol = tol_in;
-    end
-    
+        
     % Fill in P1, also check size
-    if nargin < 6 || isempty(P1_in)
+    if nargin < 4 || isempty(P1_in)
         P1 = repmat(eye(size(Ep, 2)), [1 1 DOF]);
         beCareful = false;
     else
@@ -32,14 +25,6 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
         beCareful = true;
     end
     assert(size(P1, 1) == size(Ep, 2), "Mismatched P1 and E sizes!");
-
-    
-    % Parse verbosity
-    if nargin < 8 || isempty(v_in)
-        v = true;
-    else
-        v = v_in;
-    end
     
     % Exit out if empty E matrix is given.
     if size(Ep, 2) == 0
@@ -49,9 +34,6 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     
     %% Start function
     t = tic;
-    
-    % Define some constants
-    DOF = size(DH_ext, 1);
     
     % Get size of incoming terms.
     M = size(P1, 2);
@@ -64,10 +46,10 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     Nt = round(DOF * 10);
     
     % Generate samples
-    [B_stack, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Nq, Nt, idType);
+    [Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Nq, Nt, idType);
     
     % Make Y matrix, transform it with P1, if given
-    Y = PSDM.generateYp(B_stack, Qd, Qdd, Ep);
+    Y = PSDM.generateYp(Q, Qd, Qdd, Ep);
     Yi = utilities.blockprod(Y, P1);
         
     % Solve each regression problem in a loop
@@ -75,7 +57,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
     if beCareful
         Ti = coder.nullcopy(zeros( M, Nt, DOF ));
         for i = 1:DOF
-            Ti(:, :, i) = linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
+            Ti(:, :, i) = utilities.linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
         end
     else
         Ti_horzstack = linsolve( Yi(:, :, 1), utils.vertStack(permute(tau, [3, 1, 2]))');
@@ -85,35 +67,33 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
         end
     end
         
-    T = utilities.vertStack(Ti, 3);
+    T_star = utilities.vertStack(Ti, 3);
         
     % Reduce to minimum parameters. Since we stacked all Theta vectors
-    % vertically, the result will be a vertical stacking of the P_inv
+    % vertically, the result will be a vertical stacking of the Pi
     % vectors.
-    %  B_stack = utilities.rref(T', [], true);
-    c = PSDM.config;
-    % B_stack = utilities.rrefQR2(T', c.use_iterative_refinement);
-    B_stack = utilities.rrefQR(T', [], true, c.use_iterative_refinement);
+    B_star = utilities.rrefQR(T_star');
     
     % The rank of the matrix
-    b = size(B_stack, 1);
+    b = size(B_star, 1);
     
     % Get the pseudoinverse.
-    P_stack = pinv(B_stack);
+    P_star = pinv(B_star);
     
     % Un-stack the matrix in a loop
     P2 = zeros(M, b, DOF);
     for i = 1:DOF
-        P2(:, :, i) = P_stack((1:M)+(i-1)*M, :);
+        P2(:, :, i) = P_star((1:M)+(i-1)*M, :);
     end
     
     % Combine P1, P2 into final P matrix
     P = utilities.blockprod(P1, P2);
     
     % Output information, if required.
-    utilities.vprint(v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n", ...
+    utilities.vprint(opt.v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n", ...
             int32(size(P1, 1)), int32(M), int32(b), toc(t));
 
+    c = PSDM.config;
     if c.do_reprojection_tests
         %% Double check reprojection error to make sure no errors occured
 
@@ -124,7 +104,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
                         [1 3 2]);
 
         Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
-        Tmin = B_stack * T;
+        Tmin = B_star * T_star;
 
         % Find reprojection error
         r = Ymin*Tmin - tau_stack;
@@ -138,7 +118,7 @@ function P = findReductionMatrix(DH_ext, X, g, Ep, idType_in, P1_in, tol_in,  v_
             end
         end
         
-        utilities.vprint(v, "\t\tReprojection error is %.3g\n", max(abs(r), [], 'all'));
+        utilities.vprint(opt.v, "\t\tReprojection error is %.3g\n", max(abs(r), [], 'all'));
         
     end
     

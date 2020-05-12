@@ -31,7 +31,7 @@ function C = blockprod(A, B)
     Bi = B(:, :, 1);
     
     % Multiply out in a loop. Use parallel computing if compiled code.
-    if coder.target('matlab')
+    if coder.target('matlab') || N < 20
         for i = 1:N
 
             if single_A

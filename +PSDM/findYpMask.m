@@ -1,42 +1,10 @@
-function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
+function mask = findYpMask(robot, Em, typeID, opt)
     % FINDYPMASK Finds the correlation mask for an exponent map E
     % and a robot DH_ext, X.
     %
-    % mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
+    % mask = findYpMask(robot, Em, typeID, o)
     %
-    %   INPUTS:
-    %       -DH_ext, X, g: See runID documentation.
-    %       -E: The exponent mask
-    %       -tol: The tolerance to use
-    %       -typeID: 
-    %
-    %   OUTPUTS:
-    %       - mask: A 1 x M mask of which terms of E are correlated to tau.
-    
-    %% Process Inputs
-    
-    % Use zero gravity for acceleration
-    if isempty(g_in)
-        g = [0;0;0];
-    else
-        g = g_in;
-    end
-    
-    % Parse tolerance
-    if nargin < 6 || isempty(tol_in)
-        tol = 1e-11;
-    else
-        tol = tol_in;
-    end
-    
-    % Parse verbosity
-    if nargin < 7 || isempty(v_in)
-        v = true;
-    else
-        v = v_in;
-    end
-    
-    %% Start Function
+    % mask is 1 x M mask of which terms of E are correlated to tau.
 
     time = tic;
     
@@ -56,19 +24,19 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
     Ntests = round(m*Ntestmult);
 
     % Generate joint states
-    [Q, Qd, Qdd, tau] = PSDM.generateSamples(DH_ext, X, g, Ntests, 1, typeID);
+    [Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Ntests, 1, typeID);
     
     % Make information matrix    
     Y = PSDM.generateYp(Q, Qd, Qdd, Em);
 
     % Solve for each of the DOFs
-    theta = doRegression(Y, tau, tol);
+    theta = doRegression(Y, tau, opt.tol);
 
     % Solve for masks
-    mask = any( abs(theta) > tol , 2)';
+    mask = any( abs(theta) > opt.tol , 2)';
     
     % Output information, if required.
-    utilities.vprint(v, "\t\t%d terms reduced to %d, Took %.2f seconds.\n", ...
+    utilities.vprint(opt.v, "\t\t%d terms reduced to %d, Took %.2f seconds.\n", ...
         int32(m), ...
         int32(sum(mask)), ...
         toc(time));
@@ -89,7 +57,7 @@ function mask = findYpMask(DH_ext, X, g_in, Em, typeID, tol_in, v_in)
         end
         
         % Output information, if required.
-        utilities.vprint(v, "\t\tMax Reprojection Error: %.3g.\n",  max(abs(r), [], 'all'));
+        utilities.vprint(opt.v, "\t\tMax Reprojection Error: %.3g.\n",  max(abs(r), [], 'all'));
     
     end
     
@@ -106,7 +74,7 @@ function C = doRegression(A, B, tol)
     if n < 800
         % Just do regression directly, its fast
         
-        C = linsolve(A, B);
+        C = utilities.linsolve(A, B);
         return;
         
     else
@@ -117,7 +85,7 @@ function C = doRegression(A, B, tol)
         mask = ones(m, 1, 'logical');
         for i = 1:2
             N = sum(mask);
-            C = linsolve(A(1:N, mask), B(1:N, :));
+            C = utilities.linsolve(A(1:N, mask), B(1:N, :));
 
             % Find tolerance
             Cmax = max(abs(C), [], 2);
@@ -137,7 +105,7 @@ function C = doRegression(A, B, tol)
         
         C = zeros(m, DOF);
         
-        C(mask, :) = linsolve(A(1:N, mask), B(1:N, :));
+        C(mask, :) = utilities.linsolve(A(1:N, mask), B(1:N, :));
         
         return;
         

@@ -87,18 +87,3 @@ function makeForwardDynamics(filename, E, P, Theta, varargin)
     end
     
 end
-
-
-function UpCode = makeUpAccel( Up_accel_i, UpName, Up1, Up1names )
-
-    Mi = size(Up_accel_i, 2);
-    Up_accel_i_els = repelem({''}, Mi);
-
-    for j = 1:Mi
-        Up_ind = find( all( Up1 == Up_accel_i(:, j) ), 1);
-        Up_accel_i_els{j} = Up1names{Up_ind};
-    end
-    
-    UpCode = sprintf('%s = [%s];', UpName, strjoin(Up_accel_i_els, ','));
-
-end

@@ -1,4 +1,4 @@
-function Upd = getSetUpsilon_diff(Up_in, DH_ext)
+function Upd = getSetUpsilon_diff(Up_in, lt)
     % GETSETUPSILON_DIFF Returns the minimal set of functions which are all
     % possible derivatives of a set of functions Up. Used when doing the
     % velocity model id.
@@ -6,8 +6,8 @@ function Upd = getSetUpsilon_diff(Up_in, DH_ext)
     % Upd = getSetUpsilon_diff(Up_in, DH_ext)
     
     %% Parse arguments
-    
-    DOF = size(DH_ext, 1);
+    lt = logical(lt);
+    DOF = size(lt, 1);
     
     % If Up was given as a Y instead, need to extract Upsilon
     if size(Up_in, 1)/DOF > 3
@@ -30,7 +30,7 @@ function Upd = getSetUpsilon_diff(Up_in, DH_ext)
         for j = 1:DOF
             % For each term, and each joint, take derivative and populate
             % array
-            [t, n] = diffUp(Up(:, i), j, logical(DH_ext(j, 5)));
+            [t, n] = diffUp(Up(:, i), j, lt(j));
             c = c + n;
             Upd_all(:, (c-n+1):(c)) = t;
             

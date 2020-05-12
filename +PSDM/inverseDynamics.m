@@ -45,17 +45,12 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     
     %% Start Function
     
-    DOF = size(Q, 1);
-    
+    % Get Yp
     Yp = PSDM.generateYp(Q, Qd, Qdd, E);
     
-    % Reduce theta and P together
-    PTheta = zeros( size(P, 1), DOF );
-    for i = 1:DOF
-        PTheta(:, i) = P(:, :, i) * Theta;
-    end
+    Phi_b = utilities.blockprod(P, Theta);
     
     % Solve for torques
-    tau = (Yp * PTheta)';
+    tau = (Yp * Phi_b)';
      
 end

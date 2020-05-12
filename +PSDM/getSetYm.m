@@ -1,12 +1,9 @@
-function Ym = getSetYm(DH_ext, type, Up_acc_in)
+function Ym = getSetYm(lt, type, Up_acc_in)
     % GETSETYM Returns the full search space of projected acceleration
     % functions for a manipulator.
     %
     % Inputs:
-    %   -DH_ext: DOF x 6 matrix of DH parameters in order
-    %        [a_1  alpha_1    d_1   theta_1    lt_1    q_sign_1;
-    %          :      :        :       :         :         :     
-    %         a_n  alpha_n    d_n   theta_n    lt_n    q_sign_n];
+    %   -lt: DOF x 1 vector of link types
     %   -type: The type of accelerations desired. Options are: 'gravity',
     %       'velocity', 'coriolis', 'centrifugal', 'joint' or 'all'.
     %   -Up_acc: A (3*DOF)xM or (5*DOF)xM matrix representing either the
@@ -18,16 +15,16 @@ function Ym = getSetYm(DH_ext, type, Up_acc_in)
     %       as a (5*DOF)xM integer matrix of exponents of the functions:
     %       [Q; sin(Q); cos(Q); Qd; Qdd]
     
-    DOF = size(DH_ext, 1);
+    DOF = size(lt, 1);
     
-    Up1 = PSDM.getSetUpsilon(DH_ext, uint8(1));
-    Up2 = PSDM.getSetUpsilon(DH_ext, uint8(2));
+    Up1 = PSDM.getSetUpsilon(lt, uint8(1));
+    Up2 = PSDM.getSetUpsilon(lt, uint8(2));
     
     
     % Velocity upsilon can be calculated from acceration terms, if given,
     % or just from Up2.
     if nargin > 2 && ~isempty(Up_acc_in)
-        Up_vel = parseUp_acc(Up_acc_in, DH_ext);
+        Up_vel = parseUp_acc(Up_acc_in, lt);
     else
         Up_vel = Up2;
     end
@@ -49,13 +46,13 @@ function Ym = getSetYm(DH_ext, type, Up_acc_in)
         case 'gravity'
             Ym = Ygrav;
         case 'coriolis'
-            Ym = simplifyY_vel( Ycor, DH_ext );
+            Ym = simplifyY_vel( Ycor, lt );
         case 'centrifugal'
-            Ym = simplifyY_vel( Ycent, DH_ext );
+            Ym = simplifyY_vel( Ycent, lt );
         case 'joint'
-            Ym = simplifyY_accel( Yjoint, DH_ext );
+            Ym = simplifyY_accel( Yjoint, lt );
         case 'velocity'
-            Ym = simplifyY_vel( horzcat(Ycor, Ycent ) , DH_ext );
+            Ym = simplifyY_vel( horzcat(Ycor, Ycent ) , lt );
         case 'all'
             Ym = horzcat(Ygrav, Ycent, Ycor, Yjoint);
         otherwise
@@ -76,11 +73,11 @@ function Y = makeY(Up, A)
 
 end
 
-function Ym_trim = simplifyY_accel( Ym, DH_ext )
+function Ym_trim = simplifyY_accel( Ym, lt )
     % We can filter out all functions of joint 1 for Upsilon_2 when dealing
     % with acceleration functions.
-    
-    DOF = size(DH_ext, 1);
+
+    DOF = size(lt, 1);
     m = size(Ym, 2);
     mask = ones(1, m, 'logical');
     
@@ -100,12 +97,12 @@ function Ym_trim = simplifyY_accel( Ym, DH_ext )
 end
 
 
-function Ym_trim = simplifyY_vel( Ym, DH_ext )
+function Ym_trim = simplifyY_vel( Ym, lt )
     % We can filter out all centrifugal terms which have elements of lower
     % joint angles trig functions of order greater than 1, same thing for
     % coriolis terms
     
-    DOF = size(DH_ext, 1);
+    DOF = size(lt, 1);
     m = size(Ym, 2);
     mask = ones(1, m, 'logical');
     
@@ -136,7 +133,7 @@ function Ym_trim = simplifyY_vel( Ym, DH_ext )
 
 end
 
-function Up_vel = parseUp_acc(Up_acc_in, DH_ext)
+function Up_vel = parseUp_acc(Up_acc_in, lt)
 
     if iscell(Up_acc_in)
         % Need to concatenate. Don't need to reduce since these
@@ -163,6 +160,6 @@ function Up_vel = parseUp_acc(Up_acc_in, DH_ext)
         Up_acc = Up_acc_in;
     end
 
-    Up_vel = PSDM.getSetUpsilon_diff(Up_acc, DH_ext);
+    Up_vel = PSDM.getSetUpsilon_diff(Up_acc, lt);
     
 end

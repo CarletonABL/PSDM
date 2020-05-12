@@ -6,7 +6,7 @@ function P = simplifyReductionMatrix(P, tol_in)
     %   Pi = PSDM.simplifyReductionMatrix(Pi);
     
     if nargin < 2 || isempty(tol_in)
-        tol = 1e-9;
+        tol = 1e-10;
     else
         tol = tol_in;
     end
@@ -25,3 +25,5 @@ function P = simplifyReductionMatrix(P, tol_in)
     
     % Second step, set any terms less than tolerance to zero
     P(abs(P) < tol) = 0;
+    
+end
