@@ -32,7 +32,7 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     %% Run mex, if possible
     
     c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex_basic
+    if coder.target('matlab') && c.use_mex
          try
             tau = PSDM.inverseDynamics_mex(E, P, Theta, Q, Qd, Qdd);
             return; 
@@ -48,7 +48,7 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     % Get Yp
     Yp = PSDM.generateYp(Q, Qd, Qdd, E);
     
-    Phi_b = utilities.blockprod(P, Theta);
+    Phi_b = permute(utilities.blockprod(P, Theta), [1 3 2]);
     
     % Solve for torques
     tau = (Yp * Phi_b)';

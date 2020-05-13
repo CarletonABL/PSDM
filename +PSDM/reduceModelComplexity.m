@@ -1,4 +1,4 @@
-function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
+function [Et, Pt, interim] = reduceModelComplexity(E, P, varargin)
     % REDUCEMODELCOMPLEXITY Reduces the complexity of a model E, P by
     % eliminating terms which contribute minimally to the dynamic model.
     
@@ -16,12 +16,13 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
     p.addOptional('Ntests', m*2);
     p.addOptional('qd_lim', 1);
     p.addOptional('qdd_lim', 10);
-    p.addOptional('tol', 1e-9);
-    p.addOptional('v', true);
+    p.addOptional('tolerance', 1e-9);
+    p.addOptional('check_accuracy', true);
+    p.addOptional('verbose', true);
     p.addOptional('interim', []); % If given, will skip the initial regression steps and use this instead.
-    p.parse(varargin{:});
-    opt = p.Results;
-    
+    [robot, opt] = parseArgs(p, varargin{:});
+    opt.tol = opt.tolerance;
+    opt.verbose = opt.v;
     
     %% Function start
     
@@ -34,9 +35,11 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
     
     % Generate many terms with typical values
     if isempty(opt.interim)
+        
         utils.vprint(opt.v, "\tGenerating test set (N = %d)...\n", int32(Ntests));
-        [Q, Qd, Qdd, tau] = ...
-            generateSamples(DH, X, g, Ntests, opt.qlim, opt.qd_lim, opt.qdd_lim);
+        
+        % Generate samples
+        [Q, Qd, Qdd, tau] = generateSamples(robot, Ntests, opt.qlim, opt.qd_lim, opt.qdd_lim);
         Yp = PSDM.generateYp(Q, Qd, Qdd, E);
 
         utils.vprint(opt.v, "\tRegressing terms...\n");
@@ -56,11 +59,7 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
         PTheta_perm = permute( utils.blockprod( P, Theta ), [2 1 3]);
 
         % Average contribution of each terms over all terms
-        % tau_Y = Yp .* PTheta_perm;
-
-        % Average contribution of each terms over all terms
         norm_tauY = zeros(Ntests, m);
-
         for i = 1:m
             norm_tauY(:, i) = vecnorm(Yp(:, i) .* PTheta_perm(:, i, :), 2, 3);
         end
@@ -68,7 +67,9 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
         % Get ratios
         ratios = norm_tauY ./ vecnorm(tau, 2, 2);
         rmax = mean( ratios, 1 );
+        
     else
+        % If interim is defined, just use that instead
         rmax = opt.interim.rmax;
         ratios = opt.interim.ratios;
         tau = opt.interim.tau;
@@ -107,8 +108,10 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
     Pt = Pt1(:, mask2, :);
     utils.vprint(opt.v && any(~mask2), "\tBase inertial parameter size reduced from %d to %d.\n", int32(size(Pt1, 2)), int32(sum(mask2)));
     
-    % Estimate error of new model
-    checkModel(DH, X, g, E, P, Et, Pt, Ntests/5, opt);
+    if opt.check_accuracy
+        % Estimate error of new model
+        checkModel(DH, X, g, E, P, Et, Pt, Ntests/5, opt);
+    end
     
     if nargout > 2
         % Return interim results, if requested
@@ -122,7 +125,7 @@ function [Et, Pt, interim] = reduceModelComplexity(DH, X, g, E, P, varargin)
 end
 
 function [Q, Qd, Qdd, tau] = ...
-    generateSamples(DH, X, g, Ntests, qlim, qd_lim, qdd_lim)
+    generateSamples(robot, Ntests, qlim, qd_lim, qdd_lim)
     % Generates sample points Q, Qd, Qdd and the corresponding torques for
     % random poses in qlim and near qd_lim, qdd_lim.
 
@@ -133,8 +136,8 @@ function [Q, Qd, Qdd, tau] = ...
     Qd = mean(qd_lim) + (rand(DOF, Ntests)-.5) * diff(qd_lim);
     Qdd = mean(qdd_lim) + (rand(DOF, Ntests)-.5) * diff(qdd_lim);
     
-    tau = PSDM.inverseDynamicsNewton(DH, X, Q, Qd, Qdd, int8(2), g)';
-    
+    tau = robot.IDfunc(Q, Qd, Qdd, robot.X);
+        
 end
 
 

@@ -11,7 +11,7 @@ function [E, P] = deriveModel(varargin)
     %   element with a value equal identically to zero will be ignored in
     %   the derivation, resulting in simpler final equations.
     %
-    % [E, P] = PSDM.deriveModel(@inverseDynamicsFunc, jointTypes): If the
+    % [E, P] = PSDM.deriveModel(inverseDynamicsFunc, jointTypes): If the
     %   first input to the function is an anonymous function handle, then
     %   the derivation will be done using this function as the sampling
     %   function. The second argument given must then by a list of joint
@@ -76,8 +76,49 @@ function [E, P] = deriveModel(varargin)
     %           and velocity effects.
     %           Default: false
     
-    % Parse arguments
-    [robot, opt] = parseArgs(varargin);
+    %% Parse arguments
+    if coder.target('matlab')
+        p = inputParser;
+        p.addOptional('tolerance', 1e-10);
+        p.addOptional('verbose', true);
+        p.addOptional('gravity_only', false);
+        [robot, opt] = parseArgs(p, varargin{:});
+        opt.v = opt.verbose; opt.tol = opt.tolerance;
+    else
+        DH = varargin{1};
+        g = varargin{2};
+        DOF = size(DH, 1);
+        if ~isempty(varargin{3})
+            X = varargin{3}(1:DOF, 1:10);
+        else
+            X = ones(DOF, 10) + rand(DOF, 10)*0.2 - 0.1;
+        end
+        if ~isempty(varargin{4})
+            tolerance = varargin{4}(1);
+        else
+            tolerance = 1e-10;
+        end
+        if ~isempty(varargin{5})
+            verbose = varargin{5}(1);
+        else
+            verbose = true;
+        end
+        if ~isempty(varargin{6})
+            gravity_only = varargin{6}(1);
+        else
+            gravity_only = false;
+        end
+        robot = struct('IDfunc', @(Qf, Qdf, Qddf, Xf, g_scale) PSDM.inverseDynamicsNewton(DH, Xf, Qf, Qdf, Qddf, int8(2), g*g_scale)', ...
+                       'DOF', DOF, ...
+                       'X', X, ...
+                       'lt', logical(DH(:, 5)));
+        opt.tolerance = tolerance;
+        opt.verbose = verbose;
+        opt.gravity_only = gravity_only;
+        opt.v = verbose; opt.tol = tolerance;
+    end          
+    
+    %% Start function
             
     % Start timeing
     t = tic;

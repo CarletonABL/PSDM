@@ -32,51 +32,8 @@ function x = linsolve(A, b, niter, useSymbolic, exitTolerance)
     end
     
     %% Start function
-    coder.extrinsic('linsolve_base')
+    coder.extrinsic('utilities.pv.linsolve_base')
     x = coder.nullcopy(zeros(size(A, 2), size(b, 2)));
-    x = linsolve_base(A, b, niter, useSymbolic, exitTolerance);
+    x = utilities.pv.linsolve_base(A, b, niter, useSymbolic, exitTolerance);
 
-end
-
-
-function x = linsolve_base(A, b, niter, useSymbolic, exitTolerance)
-
-    % Define some variables
-    tol2 = exitTolerance^2;
-    
-    % Decompose A so that we don't have to resolve everything every time
-    dA = decomposition(A, 'CheckCondition', false);
-    
-    % Get an initial solution
-    x = dA\b;
-    
-    norm_d_prev = inf(1, size(b, 2));
-    
-    for i = 1:niter
-        
-        % Get residual
-        if useSymbolic && coder.target('matlab')
-            r = double(A*sym(x,'f') - b);
-        else
-            r = utils.residual3p(A, x, b);
-        end
-        
-        d = dA \ r;
-        
-        % Make correction
-        x = x - d;
-        
-        % Break?
-        norm_d = utils.norm2(d);
-        if all(norm_d < tol2) || ...
-           all(norm_d > norm_d_prev) || ...
-           all(abs(norm_d - norm_d_prev) < exitTolerance)
-            break;
-        end
-        
-        % Store for future use
-        norm_d_prev = norm_d;
-        
-    end
-    
 end

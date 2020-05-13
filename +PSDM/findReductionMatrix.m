@@ -47,6 +47,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     
     % Generate samples
     [Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Nq, Nt, idType);
+    %[Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Nq, Nt, idType);
     
     % Make Y matrix, transform it with P1, if given
     Y = PSDM.generateYp(Q, Qd, Qdd, Ep);
@@ -61,10 +62,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
         end
     else
         Ti_horzstack = linsolve( Yi(:, :, 1), utils.vertStack(permute(tau, [3, 1, 2]))');
-        Ti = zeros(M, Nt, DOF);
-        for i = 1:DOF
-            Ti(:, :, i) = Ti_horzstack(:, (i-1)*Nt + (1:Nt));
-        end
+        Ti = reshape(Ti_horzstack, [M, Nt, DOF]);
     end
         
     T_star = utilities.vertStack(Ti, 3);

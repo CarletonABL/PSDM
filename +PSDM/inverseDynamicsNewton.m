@@ -146,13 +146,14 @@ function [wrench, extra] = ...
     
     %% Check if MEX exists, if so, run that
     c = PSDM.config;
-    if coder.target('matlab') && c.use_mex_basic
+    if coder.target('matlab') && c.use_mex
         try
             [wrench, extra] = ...
                 PSDM.inverseDynamicsNewton_mex(double(DH_ext), double(Xlist), double(Q), double(Qd), double(Qdd), int8(outputFrame), double(g), double(Rbase));
             return;
-        catch
+        catch e
             warning("Could not run mex file! Likely need to compile PSDM toolbox with PSDM.make.");
+            disp(e)
         end
     end
     

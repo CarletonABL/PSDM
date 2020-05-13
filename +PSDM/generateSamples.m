@@ -42,15 +42,19 @@ function [Q, Qd, Qdd, tau] = generateSamples(robot, Nq, Nt, type_in)
         
         case 'gravity'
             [Q, Qd, Qdd] = generateSamplesGravity(DOF, Nq);
+            g_scale = 1;
         
         case 'accel'
             [Q, Qd, Qdd] = generateSamplesAccel(DOF, Nq, joints);
+            g_scale = 0;
         
         case {'velocity', 'centripital', 'coriolis'}
             [Q, Qd, Qdd] = generateSampleVelocity(DOF, Nq, joints);
+            g_scale = 0;
         
         case 'all'
             [Q, Qd, Qdd] = generateSampleAll(DOF, Nq);
+            g_scale = 1;
         
         otherwise
             error("Unknown request type");
@@ -64,7 +68,7 @@ function [Q, Qd, Qdd, tau] = generateSamples(robot, Nq, Nt, type_in)
         Xlist = getRobotInertiaProps(robot.X, Nt);
         
         % Get torques
-        tau = generateTorques(Q, Qd, Qdd, joints, robot.IDfunc, Xlist, type);
+        tau = generateTorques(Q, Qd, Qdd, joints, robot, Xlist, g_scale);
         
     end
     
@@ -147,37 +151,30 @@ function [Q, Qd, Qdd] = generateSampleAll(DOF, Nq)
 
 end
 
-
-function tau = generateTorques(Q, Qd, Qdd, joints, IDfunc, Xlist, type)
+function tau = generateTorques(Q, Qd, Qdd, joints, robot, Xlist, g_scale)
     %% Generate torques
 
+    IDfunc = robot.IDfunc;
     Nt = size(Xlist, 3);
     Nq = size(Q, 2);
     DOF = size(Xlist, 1);
     
     tau = zeros(Nq, DOF, Nt);
     isCoriolis = numel(joints) == 2;
-    includeGravity = any(strcmp(type, {'all', 'gravity'}));
     
     for j = 1:Nt
         
-        tau_j = IDfunc(Q, Qd, Qdd, Xlist(:, :, j));
-        
-        if ~includeGravity || isCoriolis
-            z = zeros(size(Q));
-            tau_grav = IDfunc(Q, z, z, Xlist(:, :, j));
-            tau_j = tau_j - tau_grav;
-        end
+        tau_j = IDfunc(Q, Qd, Qdd, Xlist(:, :, j), g_scale);
        
         % For a coriolis ID, need to subtract away the centrifugal terms
         if isCoriolis
             Qd_cent1 = Qd; Qd_cent1(joints(2), :) = zeros(1, Nq);
             Qd_cent2 = Qd; Qd_cent2(joints(1), :) = zeros(1, Nq);
             
-            tauCent1 = IDfunc(Q, Qd_cent1, Qdd, Xlist(:, :, j));
-            tauCent2 = IDfunc(Q, Qd_cent2, Qdd, Xlist(:, :, j));
+            tauCent1 = IDfunc(Q, Qd_cent1, Qdd, Xlist(:, :, j), g_scale);
+            tauCent2 = IDfunc(Q, Qd_cent2, Qdd, Xlist(:, :, j), g_scale);
             
-            tau_j = tau_j - tauCent1 - tauCent2 + 2*tau_grav;
+            tau_j = tau_j - tauCent1 - tauCent2;
         end
         
         tau(:, :, j) = tau_j;

@@ -22,12 +22,14 @@ function make(functions)
 
         % Define argument types for entry-point 'runID'.
         ARGS = cell(1,1);
-        ARGS{1} = cell(5,1);
-        ARGS{1}{1} = coder.typeof(0,[10  6],[1 0]);
-        ARGS{1}{2} = coder.typeof(0,[3 1]);
-        ARGS{1}{3} = coder.typeof(0,[10 10],[1 0]);
-        ARGS{1}{4} = coder.typeof(0);
-        ARGS{1}{5} = coder.typeof(false);
+        ARGS{1} = cell(6,1);
+        ARGS{1}{1} = coder.typeof(0,[10  6],[1 0]); % DH
+        ARGS{1}{2} = coder.typeof(0,[3 1]);         % g
+        ARGS{1}{3} = coder.typeof(0,[10 10],[1 1]); % X
+        ARGS{1}{4} = coder.typeof(0, [1 1], [1 1]); % tolerance
+        ARGS{1}{5} = coder.typeof(false, [1 1], [1 1]);           % verbose
+        ARGS{1}{6} = coder.typeof(false, [1 1], [1 1]);           % gravity_only
+        
 
         cd(fullfile(path, '+PSDM'));
 
@@ -157,6 +159,12 @@ function make(functions)
 
         disp("Done.");
         
+    end
+    
+    disp("Code generation done for PSDM package.");
+    
+    if any([strcmp(functions, 'all'), strcmp(functions, 'residual3p'), strcmp(functions, 'blockprod')])
+        utilities.make(functions);
     end
 
 
