@@ -28,3 +28,6 @@ gi = vertcat( Qi, sin(Qi), cos(Qi), Qdi, Qddi);
 end
 
 end
+
+%EXTRA_CODE%
+

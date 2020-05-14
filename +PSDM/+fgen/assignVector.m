@@ -8,7 +8,7 @@ function codeVec = assignVector( name, els, opt )
 
     switch opt.assign_type
         case {'vector'}
-            codeVec = sprintf('%s = [%s];', name, strjoin(els, ','));
+            codeVec = sprintf('%s = [%s];', name, strjoin(els, ', '));
             
         case {'newline'}
             N = numel(els);

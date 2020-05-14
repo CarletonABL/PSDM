@@ -23,10 +23,26 @@ function [vars, names, code] = makePhiCode(vars, names, code, PhiName, opt)
     Phi( abs(Phi - 1) < tol) = 1;
     
     Phi_mask = abs(Phi) > tol;
+    
+    % Do same thing for P
+    P(gravMask, :, :) = P(gravMask, :, :) .* utilities.g;
+    P( abs(P) < tol ) = 0;
+    P( abs(P - 1) < tol) = 1;
+    P = utils.ratRound(P, 1e-10);
+    P_mask = abs(P) > tol;
+    vars.P = P;
+    vars.P_mask = P_mask;
 
     if strcmp(opt.alg, 'ID')
         % Inverse dynamics
-        if strcmp(opt.tau_type, 'matrix')
+
+        if strcmp(opt.combine_type, 'gradual')
+            
+            if ~opt.explicite_Phi
+                code.Phi = sprintf('%s = coder.const(%s);', PhiName, mat2str(Phi( Phi_mask(:) ) ));
+            end
+        
+        elseif strcmp(opt.tau_type, 'matrix')
             
             % Convert to string
             Phi_str = mat2str(Phi);
@@ -43,6 +59,7 @@ function [vars, names, code] = makePhiCode(vars, names, code, PhiName, opt)
             end
             % Concatenate
             code.Phi = strjoin(code.Phi_i, '\n');
+            %code.Phi = sprintf('Phi_b = cell(%d, 1);\n%s', DOF, code.Phi);
             
         end
         

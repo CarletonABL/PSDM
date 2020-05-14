@@ -31,7 +31,7 @@ function res = iparfor( func, N, sz, specifySize )
     res = zeros( [sz N] );
     res_i = coder.nullcopy(zeros( sz ));
     
-    if utils.autoPar
+    if utilities.autoPar
         parfor i = 1:N
             
             if coder.const(coder.target('matlab'))

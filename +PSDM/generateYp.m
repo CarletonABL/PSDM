@@ -72,7 +72,7 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     
     if doGravity
         gravMask = ~any( E(3*DOF + (1:(2*DOF)), :) > 0, 1);
-        Yp(:, gravMask) = Yp(:, gravMask) * utils.g;
+        Yp(:, gravMask) = Yp(:, gravMask) * utilities.g;
     end
     
 end

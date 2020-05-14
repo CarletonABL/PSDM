@@ -3,9 +3,14 @@ function [vars, names, code] = makeYMatrixCode(vars, names, code, opt)
 
     % loop and create code for elements of Y
     DOF = vars.DOF;
-    
+        
     if strcmp(opt.alg, 'ID')
         %% Inverse Dynamics
+        
+        if opt.pre_multiply
+            code.Y = '';
+            return;
+        end
         
         % Generate set for Y
         keepAllElements = strcmp(opt.tau_type, 'matrix');
@@ -71,5 +76,6 @@ function [vars, names, code] = makeYMatrixCode(vars, names, code, opt)
         code.Y = strjoin({code.Yind, code.Yacc}, '\n\n');
         
     end
+    
     
 end

@@ -3,6 +3,12 @@ function [vars, names, code] = makeAccelCode(vars, names, code, opt)
     DOF = vars.DOF;
     
     if strcmp(opt.alg, 'ID')
+        
+        if opt.pre_multiply
+            code.A = '';
+            return;
+        end
+        
         % Inverse dynamics
         Aind = (1:(2*DOF))+3*DOF;
     else

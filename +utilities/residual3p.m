@@ -13,7 +13,7 @@ function r = residual3p(A,x,b)
     %% Try to run mex
     if coder.target('matlab')
         try
-            r = utils.residual3p_mex(A, x, b);
+            r = utilities.residual3p_mex(A, x, b);
             return;
         catch e
             disp(e);
@@ -25,7 +25,7 @@ function r = residual3p(A,x,b)
    N = size(A, 1);
    
    r = permute( ...
-            utils.iparfor( @(i) residual1D( A(i, :), x, b(i, :) ), ...
+            utilities.iparfor( @(i) residual1D( A(i, :), x, b(i, :) ), ...
                            N, [1, m], false), ...
             [3, 2, 1]);
         
@@ -37,7 +37,7 @@ function r_i = residual1D(A_i, x, b_i)
     r_i = zeros(1, m);
 
     for j = 1:m
-        r_i(j) = utils.dot3p(A_i, x(:, j), -b_i(j));
+        r_i(j) = utilities.dot3p(A_i, x(:, j), -b_i(j));
     end
 
 end

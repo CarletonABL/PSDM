@@ -17,7 +17,7 @@ function x = linsolve_base(A, b, niter, useSymbolic, exitTolerance)
         if useSymbolic && coder.target('matlab')
             r = double(A*sym(x,'f') - b);
         else
-            r = utils.residual3p(A, x, b);
+            r = utilities.residual3p(A, x, b);
         end
         
         d = dA \ r;
@@ -26,7 +26,7 @@ function x = linsolve_base(A, b, niter, useSymbolic, exitTolerance)
         x = x - d;
         
         % Break?
-        norm_d = utils.norm2(d);
+        norm_d = utilities.norm2(d);
         if all(norm_d < tol2) || ...
            all(norm_d > norm_d_prev) || ...
            all(abs(norm_d - norm_d_prev) < exitTolerance)

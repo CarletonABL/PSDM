@@ -61,7 +61,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
             Ti(:, :, i) = utilities.linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
         end
     else
-        Ti_horzstack = linsolve( Yi(:, :, 1), utils.vertStack(permute(tau, [3, 1, 2]))');
+        Ti_horzstack = linsolve( Yi(:, :, 1), utilities.vertStack(permute(tau, [3, 1, 2]))');
         Ti = reshape(Ti_horzstack, [M, Nt, DOF]);
     end
         
