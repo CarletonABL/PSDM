@@ -1,8 +1,6 @@
-function [vars, names, code] = codeSetSingle(Su, name, vars, names, code, opt)
+function [vars, names, code] = codeSetSingle(Su, name, keepAllElements, vars, names, code, opt)
     % Codes a single set
-    
-    mult_type = opt.mult_type;
-    
+        
     Mu = size(Su, 2);
     
     % Pre-init elements
@@ -20,7 +18,12 @@ function [vars, names, code] = codeSetSingle(Su, name, vars, names, code, opt)
         if all(s == 0)
             
             % Function is one, ignore it
-            names.s{i} = '1';
+            names.s{i} = '1.0';
+            
+            if keepAllElements
+                c = c+1;
+                code.s{c} = '1.0';
+            end
             
         else
                         
@@ -31,6 +34,7 @@ function [vars, names, code] = codeSetSingle(Su, name, vars, names, code, opt)
             if nnz(s) > 1
                 % Need to define a new operation
                 c = c + 1;
+                                
                 names.s{i} = sprintf('%s(%d)', name, c);
                 str = repelem({''}, nnz(s) );
                 d = 1;
@@ -44,12 +48,16 @@ function [vars, names, code] = codeSetSingle(Su, name, vars, names, code, opt)
 
                 % Combine
                 code.s{c} = sprintf('%s', strjoin(str, ".*"));
-                code.s_els1{c} = str{1};
-                code.s_els2{c} = str{2};
                 
             elseif nnz(s) == 1
+                
                 j = find(s>0);
                 names.s{i} = names.gamma{ s(j) }{ j };
+                if keepAllElements
+                    c = c+1;
+                    code.s{c} = names.s{i};
+                end
+                
             end
             
         end
@@ -59,20 +67,12 @@ function [vars, names, code] = codeSetSingle(Su, name, vars, names, code, opt)
     % Combine code for all elements
     if c > 0
         
-        if strcmp(mult_type, 'individual')
-            % code.S = sprintf('%s = [%s];', name, strjoin(code.s(1:c), ','));
-            code.S = PSDM.fgen.assignVector( name, code.s(1:c), opt );
-        else
-            v1 = PSDM.fgen.assignVector( strcat(name, '_m1'), code.s_els1(1:c), opt );
-            v2 = PSDM.fgen.assignVector( strcat(name, '_m2'), code.s_els2(1:c), opt );
-            % v1 = sprintf('%s = [%s];', strcat(name, '_m1'), strjoin(code.s_els1(1:c), ','));
-            % v2 = sprintf('%s = [%s];', strcat(name, '_m2'), strjoin(code.s_els2(1:c), ','));
-            v3 = sprintf('%s = %s .* %s;', name, strcat(name, '_m1'), strcat(name, '_m2'));
-            code.S = strjoin({v1, v2, v3}, '\n');
-        end
+        code.S = PSDM.fgen.assignVector( name, code.s(1:c), opt );
         
     else
+        
         code.S = '';
+        
     end
 
 end

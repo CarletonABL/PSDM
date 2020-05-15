@@ -21,7 +21,9 @@ scripts/
 *.autosave
 *.asv
 save_data/*
-\+PSDM_v1
+
+# Ignore config file
+*config.m
 
 !temp/README*
 
@@ -37,9 +39,6 @@ save_data/*
 *.prj
 
 *.DS_store
-
-# Ignore files starting with a * (personal preference)
-\**
 
 # Ignore sublime folders
 *.sublime-project
@@ -59,6 +58,14 @@ save_data/*
 *.so
 *.mex*
 *.mexmaci64
+
+# Auto-generated files of LaTex
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+*.log
 
 # Packages #
 ############

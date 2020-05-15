@@ -1,21 +1,17 @@
-function Up = getSetUpsilon(DH_ext, order)
+function Up = getSetUpsilon(lt, order)
     % GETUPSILON Produces the upsilon set for a manipulator of order k.
     %
     % Inputs:
-    %   -DH_ext: DOF x 6 matrix of DH parameters in order
-    %        [a_1  alpha_1    d_1   theta_1    lt_1    q_sign_1;
-    %          :      :        :       :         :         :     
-    %         a_n  alpha_n    d_n   theta_n    lt_n    q_sign_n];
-    %  -Order: the order of the set to produce
+    %   -lt: DOF x 1 vector of link types
+    %   -Order: the order of the set to produce
     %
     % Output:
     %   -Up: The functions in the set Upsilon(k) for the manipulator,
     %        represented as a (3*DOF)xM integer matrix of exponents on the
     %        functions: Q, sin(Q) and cos(Q), respectively.
 
-    lt = logical(DH_ext(:, 5));
-    DOF = size(DH_ext, 1);
-    
+    lt = logical(lt);
+    DOF = size(lt, 1);
     
     % Get zetas (in loop)
     n = zeros(DOF, 1); % Size of each zeta

@@ -1,12 +1,12 @@
-function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
+function [Q, Qd, Qdd, tau] = generateSamples(robot, Nq, Nt, type_in)
     % GENERATESAMPLES: Generates joint angles and corresponding torques for Nq
     % different (random) joint states, and Nt different inertial
     % parameters.
     %
-    % [Q, Qd, Qdd] = generateSamples(DH_ext, X, g_in, Nq, Nt, type)
+    % [Q, Qd, Qdd] = generateSamples(robot, Nq, Nt, type)
     %
     %   INPUTS:
-    %       -DH_ext, X, g: As per run id.
+    %       -robot: As per run id.
     %       -Nq : Number of joint positions to generate
     %       -Nt : Number of inertial parameters to generate at.
     %       -type: string or cell array.
@@ -18,7 +18,7 @@ function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
     %% Parse arguments
     
     % Parse type
-    if nargin < 6 || isempty(type_in)
+    if nargin < 4 || isempty(type_in)
         type = 'all';
         joints = [];
     else
@@ -33,52 +33,28 @@ function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
         
     end
     
-    % Parse gravity vector
-    if isempty(g_in)
-        g = zeros(3, 1);
-    else
-        g = g_in(1:3, 1);
-        assert(~any(strcmp({type, type}, {'gravity', 'all'})) || abs(sum(g.^2) - 1) < 1e-2, "Must give a unit vector for gravity direction!");
-        coder.varsize('g', [3 1], [0 0]);
-    end
-    
-    % Run mex, if possible
-    c = PSDM.config;
-    if coder.target('matlab') && c.allow_mex_basic
-        try
-            if nargout > 3
-                [Q, Qd, Qdd, tau] = PSDM.generateSamples_mex(DH_ext, X, g, Nq, Nt, {type, joints});
-            else
-                [Q, Qd, Qdd] = PSDM.generateSamples_mex(DH_ext, X, g, Nq, Nt, {type, joints});
-            end
-            
-            return;
-            
-        catch
-            
-            warning("PSDM is not compiled! PSDM.generateSamples will run slowly without compilation. Recommend running PSDM.make");
-        
-        end
-    end
-
     %% Start Function
     
-    DOF = size(DH_ext, 1);
+    DOF = robot.DOF;
     
     % Different behaviour depending on ID type
     switch type
         
         case 'gravity'
             [Q, Qd, Qdd] = generateSamplesGravity(DOF, Nq);
+            g_scale = 1;
         
         case 'accel'
             [Q, Qd, Qdd] = generateSamplesAccel(DOF, Nq, joints);
+            g_scale = 0;
         
         case {'velocity', 'centripital', 'coriolis'}
             [Q, Qd, Qdd] = generateSampleVelocity(DOF, Nq, joints);
+            g_scale = 0;
         
         case 'all'
             [Q, Qd, Qdd] = generateSampleAll(DOF, Nq);
+            g_scale = 1;
         
         otherwise
             error("Unknown request type");
@@ -87,11 +63,13 @@ function [Q, Qd, Qdd, tau] = generateSamples(DH_ext, X, g_in, Nq, Nt, type_in)
     
     % Generate torques, if needed
     if nargout > 3
+        
         % Generate list of random inertial properties for sampling
-        Xlist = getRobotInertiaProps(X, Nt);
+        Xlist = getRobotInertiaProps(robot.X, Nt);
         
         % Get torques
-        tau = generateTorques(Q, Qd, Qdd, joints, DH_ext, Xlist, g);
+        tau = generateTorques(Q, Qd, Qdd, joints, robot, Xlist, g_scale);
+        
     end
     
 end
@@ -103,7 +81,6 @@ function [Q, Qd, Qdd] = generateSamplesGravity(DOF, Nq)
     Q = generateRandomPose(DOF, Nq);
     Qd = zeros(size(Q));
     Qdd = zeros(size(Q));
-
 
 end
 
@@ -174,27 +151,29 @@ function [Q, Qd, Qdd] = generateSampleAll(DOF, Nq)
 
 end
 
-
-function tau = generateTorques(Q, Qd, Qdd, joints, DH_ext, Xlist, g)
+function tau = generateTorques(Q, Qd, Qdd, joints, robot, Xlist, g_scale)
     %% Generate torques
 
+    IDfunc = robot.IDfunc;
     Nt = size(Xlist, 3);
     Nq = size(Q, 2);
-    DOF = size(DH_ext, 1);
+    DOF = size(Xlist, 1);
     
     tau = zeros(Nq, DOF, Nt);
     isCoriolis = numel(joints) == 2;
     
     for j = 1:Nt
         
-       tau_j = PSDM.inverseDynamicsNewton(DH_ext, Xlist(:, :, j), Q, Qd, Qdd, int8(2), g)';
+        tau_j = IDfunc(Q, Qd, Qdd, Xlist(:, :, j), g_scale);
        
-       % For a coriolis ID, need to subtract away the centrifugal terms
+        % For a coriolis ID, need to subtract away the centrifugal terms
         if isCoriolis
             Qd_cent1 = Qd; Qd_cent1(joints(2), :) = zeros(1, Nq);
             Qd_cent2 = Qd; Qd_cent2(joints(1), :) = zeros(1, Nq);
-            tauCent1 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent1, Qdd, int8(2), [0 0 0]')';
-            tauCent2 = PSDM.inverseDynamicsNewton(DH_ext(:, :), Xlist(:, :, j), Q, Qd_cent2, Qdd, int8(2), [0 0 0]')';
+            
+            tauCent1 = IDfunc(Q, Qd_cent1, Qdd, Xlist(:, :, j), g_scale);
+            tauCent2 = IDfunc(Q, Qd_cent2, Qdd, Xlist(:, :, j), g_scale);
+            
             tau_j = tau_j - tauCent1 - tauCent2;
         end
         

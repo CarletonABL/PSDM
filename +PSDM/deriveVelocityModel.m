@@ -1,54 +1,22 @@
-function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
+function [E, Pi] = deriveVelocityModel(robot, Ep_accel, opt)
     % RUNIDVEL Performs a dynamic ID using PSDM (Pseudo-Symbolic Dynamic
     % Modelling), but only for the velocity terms.
     %
-    % [Ep_vel, P_vel] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
+    % [E, Pi] = deriveVelocityModel(robot, Ep_accel, opt);
     %
-    % Should be run through PSDM.deriveModel command.
+    % This function is not intended for use by public, refer to
+    % PSDM.deriveModel.
     %
-    % Inputs:
-    %   - DH_ext, X: As per runID.
-    %   - E_accel: The accel map of the robot.
-    %   - tol: Tolerance
-    %   - v: Verbosity flag. Default: true.
-    %
-    % Ouputs:
-    %   - Ep_vel: The exponent matrix representing the Y terms for
-    %       velocity.
-    %   - P_vel: The reduction matrix.
-    
-    %% Parse arguments
-    
-    % Fill in imcomplete arguments
-    if nargin < 4 || isempty(tol_in)
-        tol = 1e-12;
-    else
-        tol = tol_in;
-    end
-    
-    if nargin < 5 || isempty(v_in)
-        v = true;
-    else
-        v = v_in;
-    end
-    
-    % Check inputs
-    assert(size(DH_ext, 2) == 6, "Invalid DH table");
-    assert(all(abs(DH_ext(:, 6)) == 1), "Link sign column appears invalid. All numbers must be -1 or 1!");
-    assert(size(X, 2) == 10 && size(X, 1) == size(DH_ext, 1), "X appears to be the wrong size!");
-    assert(all(X(:, [1, 5, 6, 7]) >= 0, 'all'), "Negative masses and principle inertias Ixx Iyy Izz are not possible!")
-    
-    
-    %% Function Start
+    % See also PSDM.deriveModel
     
     % Init some variables
-    DOF = size(DH_ext, 1);
+    DOF = robot.DOF;
     
     % Start timer
     time = tic;
     
     % Get candidate functions from accel terms
-    Em_vel = PSDM.getSetYm(DH_ext, 'velocity', Ep_accel);
+    Em_vel = PSDM.getSetYm(robot.lt, 'velocity', Ep_accel);
     
     Nterms = size(Em_vel, 2);
     Nterms_test = Nterms / (DOF + nchoosek(DOF, 2));
@@ -62,10 +30,10 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
     Naccels = DOF + size(jointCombinations, 1);
     assert(Naccels < 1000);
 
-    Ei = cell(Naccels, 1);
+    E = cell(Naccels, 1);
     if ~coder.target('matlab')
         for i = 1:Naccels
-            Ei{i} = zeros(5*DOF, 1, 'uint8');
+            E{i} = zeros(5*DOF, 1, 'uint8');
         end
     end
     Pi = cell(Naccels, 1);
@@ -76,7 +44,8 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
     end
     
     % Output information if required.
-    utilities.vprint(v, '\nRunning centripital derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
+    utilities.vprint(opt.v, '\nRunning centripital derivation (%d search terms).\n\n', ...
+        int32(Nterms_test * DOF));
         
     % Loop through each centrifugal acceleration term
     for j = 1:DOF
@@ -93,21 +62,23 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
         Ep_cent_i = Em_vel(:,maskCombined);
         
         % Output information, if required.
-        utilities.vprint(v, '\tSearching in joint %d (%d terms)...\n', int32(j), int32(sum(maskCombined)));  
+        utilities.vprint(opt.v, '\tSearching in joint %d (%d terms)...\n', ...
+            int32(j), int32(sum(maskCombined)));  
         
         % Get correlation mask
-        maskCorr = PSDM.findYpMask(DH_ext, X, [], Ep_cent_i, {'centripital', j}, tol, v);
+        maskCorr = PSDM.findYpMask(robot, Ep_cent_i, {'centripital', j}, opt);
         
         % Combine masks.
         mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );   
         
         % Store results, and find reduction matrix
-        Ei{j} = Ep_cent_i(:, maskCorr);
-        Pi{j} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cent_i(:, maskCorr), {'centripital', j}, [], tol, v);
+        E{j} = Ep_cent_i(:, maskCorr);
+        Pi{j} = PSDM.findReductionMatrix(robot, Ep_cent_i(:, maskCorr), {'centripital', j}, [], opt);
     end
     
     % Output information, if required
-    utilities.vprint(v, '\nRunning coriolis derivation (%d search terms).\n\n', int32(Nterms_test * DOF));
+    utilities.vprint(opt.v, '\nRunning coriolis derivation (%d search terms).\n\n', ...
+        int32(Nterms_test * DOF));
     
     % Loop through and ID all coriolis terms
     for i = 1:size(jointCombinations, 1)
@@ -127,23 +98,24 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
         Ep_cor_ij = Em_vel(:, maskCombined);
 
         % Output information, if required.
-        utilities.vprint(v, '\tSearching in joints %d/%d (%d terms)...\n', int32(ij(1)), int32(ij(2)), int32(sum(maskCombined)));  
+        utilities.vprint(opt.v, '\tSearching in joints %d/%d (%d terms)...\n', ...
+            int32(ij(1)), int32(ij(2)), int32(sum(maskCombined)));  
         
         % Get correlation mask
-        maskCorr = PSDM.findYpMask(DH_ext, X, [], Ep_cor_ij, {'coriolis', ij}, tol, v);
+        maskCorr = PSDM.findYpMask(robot, Ep_cor_ij, {'coriolis', ij}, opt);
         
         % Combine masks
         mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );    
         
         % Store results, find reduction matrix
-        Ei{DOF+i} = Ep_cor_ij(:, maskCorr);
-        Pi{DOF+i} = PSDM.findReductionMatrix(DH_ext, X, [], Ep_cor_ij(:, maskCorr), {'coriolis', ij}, [], tol, v);
+        E{DOF+i} = Ep_cor_ij(:, maskCorr);
+        Pi{DOF+i} = PSDM.findReductionMatrix(robot, Ep_cor_ij(:, maskCorr), {'coriolis', ij}, [], opt);
     end
     
     % Get number of functions
     p_vel = 0; % Keep track of number of terms in final result
-    for i = 1:numel(Ei)
-        p_vel = p_vel + size(Ei{i}, 2);
+    for i = 1:numel(E)
+        p_vel = p_vel + size(E{i}, 2);
     end
     % Get number of functions
     ell_vel = 0; % Keep track of number of terms in final result
@@ -152,6 +124,7 @@ function [Ei, Pi] = deriveVelocityModel(DH_ext, X, Ep_accel, tol_in, v_in)
     end
     
     % Output information, if required.
-    utilities.vprint(v, '\tVelocity matching done. %d / %d terms remaining (took %.3g sec total).\n\n', int32(p_vel), int32(ell_vel), toc(time));
+    utilities.vprint(opt.v, '\tVelocity matching done. %d / %d terms remaining (took %.3g sec total).\n\n', ...
+        int32(p_vel), int32(ell_vel), toc(time));
    
 end

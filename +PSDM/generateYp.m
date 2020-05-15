@@ -16,7 +16,7 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     
     % Run mex, if possible
     c = PSDM.config;
-    if coder.target('matlab') && size(Q, 2) < 40000 && c.allow_mex_basic
+    if coder.target('matlab') && size(Q, 2) < 40000 && c.use_mex
          try
             Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
             return; 
@@ -72,7 +72,7 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     
     if doGravity
         gravMask = ~any( E(3*DOF + (1:(2*DOF)), :) > 0, 1);
-        Yp(:, gravMask) = Yp(:, gravMask) * utils.g;
+        Yp(:, gravMask) = Yp(:, gravMask) * utilities.g;
     end
     
 end

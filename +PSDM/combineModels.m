@@ -1,14 +1,15 @@
-function [E, P] = combineModels(DH_ext, X, g, Ei_in, Pi_in, idType, tol, v)
+function [E, P] = combineModels(robot, Ei_in, Pi_in, idType, opt)
     % COMBINEMODELS Combines multiple dynamic model components (specified
     % by a cell array of Ei and Pi exponent and reduction matrices,
     % respectively.
     %
+    % [E, P] = combineModels(robot, Ei_in, Pi_in, idType, opt)
+    %
     % idType specifies what type of combinations to test for, possible
     % options are 'accel' or 'velocity'.
     
-    %% Parse Inputs
-    
-    DOF = size(DH_ext, 1);
+    %% Parse Inputs    
+    DOF = robot.DOF;
     N = 1 + DOF*2 + nchoosek(DOF, 2);
     assert(N< 1000);
     
@@ -57,21 +58,15 @@ function [E, P] = combineModels(DH_ext, X, g, Ei_in, Pi_in, idType, tol, v)
 
     % Check P
     for i = 1:N
-        if nargin < 5 || numel(Pi) < i || isempty(Pi{i})
+        if nargin < 3 || numel(Pi) < i || isempty(Pi{i})
             Pi{i} = repmat( eye( size(Ei{i}, 2) ), [1 1 DOF]);
         end
     end
     
-    if nargin < 6 || isempty(idType)
+    if nargin < 4 || isempty(idType)
         idType = 'all';
     end
-    if nargin < 7 || isempty(tol)
-        tol = 1e-12;
-    end
-    if nargin < 8 || isempty(v)
-        v = true;
-    end
-
+    
     %% Function start
         
     % Get combined sizes
@@ -95,9 +90,6 @@ function [E, P] = combineModels(DH_ext, X, g, Ei_in, Pi_in, idType, tol, v)
     end
     
     % Find base parameters of "combined" system
-    P = PSDM.findReductionMatrix(DH_ext, X, g, E, idType, P_combined, tol, v);
-    
-    % Round away numerical errors
-    % P( abs(P) < 1e-14 ) = 0;
+    P = PSDM.findReductionMatrix(robot, E, idType, P_combined, opt);
     
 end
