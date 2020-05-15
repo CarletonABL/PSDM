@@ -1,6 +1,8 @@
 function C = blockprod(A, B)
     % BLOCKPROD Multiplies two matrices or vectors element-wise along
     % dimension 3.
+    %
+    % C = blockprod(A, B)
     
     assert(size(A, 3) == size(B, 3) || ...
            size(B, 3) == 1 || ...
@@ -15,7 +17,7 @@ function C = blockprod(A, B)
     
     % If either A or B have no 3rd dimension, then we can get away with
     % just a normal matrix multiplication + some rearrangements
-    if single_A && coder.target('matlab')
+    if single_A
         
         B_cat = permute( utilities.vertStack(permute(B, [2 1 3])), [2 1 3]);
         C = reshape( A*B_cat, [size(A, 1), size(B, 2), N]);
