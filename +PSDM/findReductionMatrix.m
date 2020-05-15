@@ -8,6 +8,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     %% Process inputs
     
     DOF = robot.DOF;
+    coder.extrinsic('utilities.blockprod');
     
     % Parse idType
     if nargin < 3 || isempty(idType_in)
@@ -47,21 +48,21 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     
     % Generate samples
     [Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Nq, Nt, idType);
-    %[Q, Qd, Qdd, tau] = PSDM.generateSamples(robot, Nq, Nt, idType);
     
     % Make Y matrix, transform it with P1, if given
     Y = PSDM.generateYp(Q, Qd, Qdd, Ep);
-    Yi = utilities.blockprod(Y, P1);
         
     % Solve each regression problem in a loop
     % If Yi is the same for all i, solve this in a single step
     if beCareful
+        Yi = coder.nullcopy(zeros(size(Y, 1), size(P1, 2), size(P1, 3)));
+        Yi = utilities.blockprod(Y, P1);
         Ti = coder.nullcopy(zeros( M, Nt, DOF ));
         for i = 1:DOF
             Ti(:, :, i) = utilities.linsolve( Yi(:, :, i), squeeze(tau(:, i, :)) );
         end
     else
-        Ti_horzstack = linsolve( Yi(:, :, 1), utilities.vertStack(permute(tau, [3, 1, 2]))');
+        Ti_horzstack = linsolve( Y, utilities.vertStack(permute(tau, [3, 1, 2]))');
         Ti = reshape(Ti_horzstack, [M, Nt, DOF]);
     end
         
@@ -85,7 +86,11 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     end
     
     % Combine P1, P2 into final P matrix
-    P = utilities.blockprod(P1, P2);
+    if beCareful
+        P = utilities.blockprod(P1, P2);
+    else
+        P = P2;
+    end
     
     % Output information, if required.
     utilities.vprint(opt.v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n", ...
@@ -100,6 +105,11 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
         tau_stack = permute( ...
                         utilities.vertStack(tau, 2), ...
                         [1 3 2]);
+                    
+        if ~ beCareful
+            % Yi hasn't been defined yet
+            Yi = Y;
+        end
 
         Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
         Tmin = B_star * T_star;
