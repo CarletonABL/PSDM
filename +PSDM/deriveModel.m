@@ -53,9 +53,13 @@ function [E, P] = deriveModel(varargin)
     %
     %   - inverseDynamicsFunc: An anonymous function which can be called
     %        as:
-    %           tau = inverseDynamicsFunc(Q, Qd, Qdd, X)
+    %           tau = inverseDynamicsFunc(Q, Qd, Qdd, X, g_scale)
     %        where Q, Qd, Qdd and tau are DOFxN matrices (N = number of
-    %        samples), and X is a DOFx10 matrix as defined above.
+    %        samples), and X is a DOFx10 matrix as defined above. g_scale
+    %        is a scalar which "scales" gravity. If g_scale = 0, then the
+    %        model should act as if there was no gravity, and if 
+    %        g_scale = 1 then the model should act as if there is full
+    %        gravity.
     %
     %   - jointTypes: a DOFx1 logical vector of the types of joints, with
     %        with the following mapping: false => revolute, 

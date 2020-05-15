@@ -171,9 +171,9 @@ Note, if supplied, the numerical values of this variable are not actually used. 
 
 If you do not have a DH table of the robot, but instead have access to some dynamic simulation of your manipulator, you can still use PSDM if you can define an anonymous function `@inverseDynamicsFunc` which allows the algorithm to sample the joint torques for any joint states and inertial parameters, as
 \begin{lstlisting}
-tau = inverseDynamicsFunc(Q, Qd, Qdd, X)
+tau = inverseDynamicsFunc(Q, Qd, Qdd, X, g_scale)
 \end{lstlisting}\vspace{1em}
-where \texttt{tau}, \texttt{Q}, \texttt{Qd}, \texttt{Qdd} are $n \times N$ matrices ($n$ degrees of freedom, $N$ samples), and $\mathbf{X}$ is an inertia parameter matrix as defined above.
+where \texttt{tau}, \texttt{Q}, \texttt{Qd}, \texttt{Qdd} are $n \times N$ matrices ($n$ degrees of freedom, $N$ samples), and $\mathbf{X}$ is an inertia parameter matrix as defined above. Finally, the parameter \texttt{g\_scale} should be accepted as a scalar which scales gravity. For example, if given \texttt{g\_scale = 0}, the model should run as if there were no gravity, and if \texttt{g\_scale = 1}, then the model should run normally (with gravity).
 
 \subsection{Additional Options}
 
