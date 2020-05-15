@@ -9,6 +9,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     
     DOF = robot.DOF;
     coder.extrinsic('utilities.blockprod');
+    c = PSDM.config;
     
     % Parse idType
     if nargin < 3 || isempty(idType_in)
@@ -64,6 +65,9 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     else
         Ti_horzstack = linsolve( Y, utilities.vertStack(permute(tau, [3, 1, 2]))');
         Ti = reshape(Ti_horzstack, [M, Nt, DOF]);
+        if c.do_reprojection_tests
+            Yi = Y;
+        end
     end
         
     T_star = utilities.vertStack(Ti, 3);
@@ -96,7 +100,6 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     utilities.vprint(opt.v, "\t\tReduced from (%d / %d) to %d parameters (took %.3g seconds).\n", ...
             int32(size(P1, 1)), int32(M), int32(b), toc(t));
 
-    c = PSDM.config;
     if c.do_reprojection_tests
         %% Double check reprojection error to make sure no errors occured
 
@@ -105,17 +108,14 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
         tau_stack = permute( ...
                         utilities.vertStack(tau, 2), ...
                         [1 3 2]);
-                    
-        if ~ beCareful
-            % Yi hasn't been defined yet
-            Yi = Y;
-        end
-
-        Ymin = utilities.vertStack( utilities.blockprod(Yi, P2) );
+             
+        Ymin = coder.nullcopy(zeros(size(Yi, 1), size(P2, 2), size(P2, 3)));
+        Ymin = utilities.blockprod(Yi, P2);
+        Ymin_stack = utilities.vertStack( Ymin );
         Tmin = B_star * T_star;
 
         % Find reprojection error
-        r = Ymin*Tmin - tau_stack;
+        r = Ymin_stack*Tmin - tau_stack;
 
         if any(abs(r) > 1e-3, 'all')
             if coder.target('matlab')
