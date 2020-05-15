@@ -18,9 +18,6 @@ function [vars, names, code] = makeSetupCode(E, P, Theta)
     code.setup = sprintf(['colMask = coder.const(%s);\n', ...
                          'squareMask = coder.const(%s);\n'],...
                          mat2str(colMask), mat2str(squareMask));
-    if opt.use_gpu
-        code.setup = sprintf('coder.gpu.kernelfun();\n%s', coder.setup);
-    end
                      
     n = size(E, 1);
     ind = 1:n;
