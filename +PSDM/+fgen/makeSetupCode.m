@@ -20,10 +20,6 @@ function [vars, names, code] = makeSetupCode(E, P, Theta, opt)
     
     %% Make a list of upsilon vectors from input
     
-    % Make masks
-    code.setup1 = sprintf(['colMask = coder.const(%s);\n', ...
-                         'squareMask = coder.const(%s);\n'],...
-                         mat2str(colMask), mat2str(squareMask));
     code.setup1 = '';
                      
     n = size(E, 1);
