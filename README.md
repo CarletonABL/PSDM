@@ -2,7 +2,7 @@
 
 Pseudo-Symbolic Dynamic Modelling matlab package.
 
-**The README file has been posted as a PDF, please see the file README.pdf.**
+### [**The README for this codebase is posted as a PDF, please see the file README.pdf.**](README.pdf)
 
 PSDM is a numerical method of deriving the equations of motion of an arbitrary rigid body chain, in regressor form. It is an alternative means of deriving the equations of motion for a rigid, serial kinematic chain. The result is a numerically represented model in a highly organized form, which allows for many symbolic manipulations through numerical methods. This allows for
 
