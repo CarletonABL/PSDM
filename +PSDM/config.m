@@ -7,7 +7,7 @@ function c = config()
     %   - PSDM.generateYp
     %   - PSDM.inverseDynamics
     %   - PSDM.forwardDynamics
-    c.use_mex = true;
+    c.use_mex = false;
     
     % If set to true, after each step of the algorithm, extra computations
     % will be done to double-check that the derived model is still exactly
