@@ -17,7 +17,8 @@ function [Et, Pt, interim] = reduceModelComplexity(E, P, varargin)
     % INPUTS:
     %   - E: A p x 5*DOF uint8 exponent matrix of the PSDM model.
     %   - P: A p x ell x DOF page matrix of the DOF reduction matrices Pi
-    %       for the model.    %   - DH: a DOFx4-6 array of the DH params in the following order: 
+    %       for the model.
+    %   - DH: a DOFx4-6 array of the DH params in the following order: 
     %             [a_1  alpha_1    d_1   theta_1    lt_1    q_sign_1;
     %              :       :        :       :         :         :     
     %              an   alpha_n    d_n   theta_n    lt_n    q_sign_n];

@@ -1,49 +1,59 @@
-function makeInverseDynamics(filename, E, P, Theta, varargin)
+function makeInverseDynamics(filename, E, P, varargin)
+    % MAKEINVERSEDYNAMICS Writes a procedural, faster real-time function to
+    % evaluate a model E, P.
+    %
+    % PSDM.makeInverseDynamics(filename, E, P, varargin)
+    %
+    % INPUTS:
+    %   - filename: The location where the file will be stored. This also
+    %       determines the functions name. Name should have a .m extension.
+    %       Example: fast_inverse_dynamics.m
+    %   - E: A p x 5*DOF uint8 exponent matrix of the PSDM model.
+    %   - P: A p x ell x DOF page matrix of the DOF reduction matrices Pi
+    %       for the model.
+    %
+    % This function has no outputs.
+    %
+    % After generation, the new function can be called as:
+    %
+    %   tau = fast_inverse_dynamics(Q, Qd, Qdd, Theta)
+    %
+    % where tau is a DOFxN matrix of joint torques, Q, Qd, Qdd are DOFxN
+    % matrices of joint states, and Theta is the theta vector.
+    %
+    % Name/Value Pairs:
+    %   Modify the functioning of the program with these name/value pairs.
+    %   - do_mex: If true, after generating the matlab code, the file will
+    %       undergo code-generation using matlab's codegen to generate a
+    %       mex file. Default: false.
+    %   - parallel: If true, the program will allow parallelization of the
+    %       program across joint samples. Default: false.
+    %   - return_Y: If true, then the function calling syntax becomes
+    %       either
+    %
+    %           [Y] = fast_inverse_dynamics(Q, Qd, Qdd)
+    %           [Y, tau] = fast_inverse_dynamics(Q, Qd, Qdd, Theta)
+    %
+    %       as required.
+    %       Default: false
 
     p = inputParser;
     p.addOptional('do_mex', false);
     p.addOptional('parallel', false);
-    p.addOptional('tau_type', 'vector');
-    p.addOptional('mult_type', 'individual');
-    p.addOptional('assign_type', 'vector');
-    p.addOptional('allow_open_mp', true);
-    p.addOptional('combine_type', 'gradual'); % Set to gradual (multiplies in Phi gradually)
+    p.addOptional('return_Y', false);
     
-    % Only applies if combine type is gradual
-    % linear: Computes each joint separately, linearly
-    % parallel: computes each joint separately but in parallel
-    % vectorized: computes each joint vectorized
-    p.addOptional('gradual_joint_treatment', 'linear');   
-    p.addOptional('explicite_Phi', false);   
-    p.addOptional('explicit_regressor', true);   
-
-    p.addOptional('pre_multiply', true); % If true, pre-multiplies parts of Phi in early to minimize multiplications
     p.parse(varargin{:});
     opt = p.Results;
     opt.alg = 'ID';
     
-    if opt.explicit_regressor
-        opt.explicite_Phi = true;
-    end
-
     DOF = size(P, 3);
     
     %% Make base code
     
-    [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, Theta, opt);
-    [vars, names, code] = PSDM.fgen.makePhiCode(vars, names, code, 'Phi_b', opt);
-    if opt.explicit_regressor
-        [vars, names, code] = PSDM.fgen.makeUpsilonCode_grad_reg(vars, names, code, opt);
-    elseif strcmp(opt.combine_type, 'gradual')
-        [vars, names, code] = PSDM.fgen.makeUpsilonCode_grad(vars, names, code, opt);
-    else
-        [vars, names, code] = PSDM.fgen.makeUpsilonCode(vars, names, code, opt);
-        [vars, names, code] = PSDM.fgen.makeAccelCode(vars, names, code, opt);
-        [vars, names, code] = PSDM.fgen.makeYMatrixCode(vars, names, code, opt);
-        [vars, names, code] = PSDM.fgen.makeTauCode(vars, names, code, opt);
-        code.extra = '';
-    end
-    
+    [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, opt);
+    [vars, names, code] = PSDM.fgen.makePCode(vars, names, code, opt);
+    [~, ~, code] = PSDM.fgen.makeYbCode(vars, names, code, opt);
+        
     %% Make function
     
     [funcDir, funcName, ~] = fileparts(filename);
@@ -53,19 +63,16 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     
     funcText = strrep(funcText, '%SETUP1_CODE%', code.setup1);
     funcText = strrep(funcText, '%SETUP2_CODE%', code.setup2);
-    funcText = strrep(funcText, '%UP_CODE%', code.Up);
-    funcText = strrep(funcText, '%A_CODE%', code.A);
-    funcText = strrep(funcText, '%Y_CODE%', code.Y);
     funcText = strrep(funcText, '%EXTRA_CODE%', code.extra);
-    funcText = strrep(funcText, '%PHI_CODE%', code.Phi);
     funcText = strrep(funcText, '%TAU_CODE%', code.tau);
     
-    theta_arg = '';
-    if opt.explicit_regressor
-        theta_arg = ', Theta';
+    out_args = 'tau';
+    if opt.return_Y
+        out_args = '[Y, tau]';
     end
-    funcText = strrep(funcText, 'function tau = inverseDynamics(Q, Qd, Qdd)', ...
-        sprintf('function tau = %s(Q, Qd, Qdd%s)', funcName, theta_arg));
+    
+    funcText = strrep(funcText, 'function tau = inverseDynamics(Q, Qd, Qdd, Theta)', ...
+        sprintf('function %s = %s(Q, Qd, Qdd, Theta)', out_args, funcName));
     funcText = strrep(funcText, '%p%', ...
         sprintf('%d', size(E,2)));
     
@@ -94,19 +101,15 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
         cfg.IntegrityChecks = false;
         cfg.ResponsivenessChecks = false;
         cfg.ExtrinsicCalls = false;
-        cfg.EnableOpenMP = opt.allow_open_mp;
-        cfg.MATLABSourceComments = true;
-        cfg.PreserveVariableNames = 'UserNames';
+        cfg.EnableOpenMP = true;
 
         % Define argument types for entry-point 'genTestPoses'.
         ARGS = cell(1,1);
-        ARGS{1} = cell(3,1);
+        ARGS{1} = cell(4,1);
         ARGS{1}{1} = coder.typeof(0,[DOF Inf],[0 1]);
         ARGS{1}{2} = coder.typeof(0,[DOF Inf],[0 1]);
         ARGS{1}{3} = coder.typeof(0,[DOF Inf],[0 1]);
-        if opt.explicit_regressor
-            ARGS{1}{4} = coder.typeof(0, [size(P, 2), 1], [0 0]);
-        end
+        ARGS{1}{4} = coder.typeof(0, [size(P, 2), 1], [0 0]);
         
         cdir = pwd;
         compileName = fullfile(funcDir, funcName);
