@@ -22,13 +22,17 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
     vars.squareMask = squareMask;
     
     %% Pre-set other optional code
+    code.setup1 = '';
+    code.setup2 = '';
     code.extra = '';
     code.tau = '';
     
     %% Make a list of gamma vectors from input
     
-    % Pre-init tau
-    code.setup1 = sprintf('tau = coder.nullcopy(zeros(%d, N));\n', DOF);
+    if strcmp(opt.alg, 'ID')
+        % Pre-init tau
+        code.setup1 = sprintf('tau = coder.nullcopy(zeros(%d, N));\n', DOF);
+    end
 
     % some setup
     n = size(E, 1);

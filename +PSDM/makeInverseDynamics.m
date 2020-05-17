@@ -52,7 +52,7 @@ function makeInverseDynamics(filename, E, P, varargin)
     
     [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, opt);
     [vars, names, code] = PSDM.fgen.makePCode(vars, names, code, opt);
-    [~, ~, code] = PSDM.fgen.makeYbCode(vars, names, code, opt);
+    code.tau = PSDM.fgen.makeYbCode(vars.E, vars.P, 'tau(:, i)', 'Y_i', names, opt);
         
     %% Make function
     

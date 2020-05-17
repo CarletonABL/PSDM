@@ -1,4 +1,4 @@
-function [setCode] = genCode(S, name, names, opt, depth)
+function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
     % GENCODE given a set S, generates code for this set by gradually
     % multiplying in P row by row.
 
@@ -8,7 +8,13 @@ function [setCode] = genCode(S, name, names, opt, depth)
     
     % If empty set, return zero
     if m < 1
-        setCode = sprintf('%s = 0;\n', name');
+        setCode = sprintf('%s = 0;\n', name);
+        return;
+    end
+    if n < 1
+        % Just need to sum all the P's
+        Psum = sum(cellfun(@str2num, names.y));
+        setCode = sprintf('%s = %s;\n', name, mat2str(Psum));
         return;
     end
 
@@ -33,7 +39,7 @@ function [setCode] = genCode(S, name, names, opt, depth)
         name_i = name;
         final = true;
     else
-        name_i = sprintf('%s_%dp', name, depth);
+        name_i = sprintf('%s_%dp', name_prefix, depth);
         final = false;
     end
     
@@ -59,7 +65,7 @@ function [setCode] = genCode(S, name, names, opt, depth)
         s1_single = m1i == 1;
         
         % Make code for a new y variable
-        if ~s1_single || any(~s1_empty)
+        if ~s1_single || any(~s1_empty) || final
             % Set is not singular, and at least one is non-empty. Need to
             % make a new interim variable
             
@@ -131,7 +137,7 @@ function [setCode] = genCode(S, name, names, opt, depth)
         names_s.gamma{2} = names.gamma{2}(2:end);
         
         % Call recursively
-        [setCode_s] = PSDM.fgen.genCode(Su2, name, names_s, opt, depth+1);
+        [setCode_s] = PSDM.fgen.genCode(Su2, name, name_prefix, names_s, opt, depth+1);
         
         % Combine code
         setCode = sprintf('%s\n\n%s', setCode, setCode_s);
