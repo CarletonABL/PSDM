@@ -13,7 +13,7 @@ function makeInverseDynamics(filename, E, P, Theta, varargin)
     % linear: Computes each joint separately, linearly
     % parallel: computes each joint separately but in parallel
     % vectorized: computes each joint vectorized
-    p.addOptional('gradual_joint_treatment', 'parallel');   
+    p.addOptional('gradual_joint_treatment', 'linear');   
     p.addOptional('explicite_Phi', false);   
     p.addOptional('explicit_regressor', true);   
 

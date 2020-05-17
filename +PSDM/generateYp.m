@@ -14,17 +14,6 @@ function Yp = generateYp(Q, Qd, Qdd, E)
         
     end
     
-    % Run mex, if possible
-    c = PSDM.config;
-    if coder.target('matlab') && size(Q, 2) < 40000 && c.use_mex
-         try
-            Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
-            return; 
-         catch
-             warning("PSDM is not compiled! PSDM.generateYp will run slowly without compilation. Recommend running PSDM.make");
-         end
-    end
-    
     %% Special functionality for symbolic gamma
     if coder.target('matlab') && isa(Q, 'sym')
         
@@ -34,6 +23,17 @@ function Yp = generateYp(Q, Qd, Qdd, E)
         Yp = prod(gamma .^ sym(E), 1);
         return;
         
+    end
+    
+    %% Run mex, if possible
+    c = PSDM.config;
+    if coder.target('matlab') && size(Q, 2) < 40000 && c.use_mex
+         try
+            Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
+            return; 
+         catch
+             warning("PSDM is not compiled! PSDM.generateYp will run slowly without compilation. Recommend running PSDM.make");
+         end
     end
     
     %% Otherwise, do function normally
