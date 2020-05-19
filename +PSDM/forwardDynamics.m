@@ -1,4 +1,4 @@
-function Qdd = forwardDynamics(E, P, Theta, Q, Qd, tau)
+function [Qdd, tau_induced, D] = forwardDynamics(E, P, Theta, Q, Qd, tau)
     % FORWARDDYNAMICS Evaluates the forward dynamics for a state Q, Qd and
     % joint torques tau, given a pseudo-symbolic representation E, P and
     % Theta.
@@ -21,7 +21,7 @@ function Qdd = forwardDynamics(E, P, Theta, Q, Qd, tau)
     
     DOF = size(Q, 1);
     N = size(Q, 2);
-    
+       
     % Input checking
     assert(size(E, 1) == DOF*5, "E and Q are not congruently sized. Q should be a DOF x N matrix.");
     assert(all(size(Q) == size(Qd)) && ...
@@ -34,7 +34,7 @@ function Qdd = forwardDynamics(E, P, Theta, Q, Qd, tau)
     c = PSDM.config;
     if coder.target('matlab') && c.use_mex
          try
-            Qdd = PSDM.forwardDynamics_mex(E, P, Theta, Q, Qd, tau);
+            [Qdd, tau_induced, D] = PSDM.forwardDynamics_mex(E, P, Theta, Q, Qd, tau);
             return; 
          catch
              warning("PSDM is not compiled! PSDM.forwardDynamics will run slowly without compilation. Recommend running PSDM.make");

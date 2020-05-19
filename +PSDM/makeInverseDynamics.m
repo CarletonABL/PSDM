@@ -41,10 +41,14 @@ function makeInverseDynamics(filename, E, P, varargin)
     p.addOptional('do_mex', false);
     p.addOptional('parallel', false);
     p.addOptional('return_Y', false);
-    
+    p.addOptional('code_style', 'linear');
+    p.addOptional('language', 'matlab');
+
     p.parse(varargin{:});
     opt = p.Results;
     opt.alg = 'ID';
+    opt.assign_type = 'newline';
+    opt.individual_threshold = 0;
     
     DOF = size(P, 3);
     
@@ -52,19 +56,22 @@ function makeInverseDynamics(filename, E, P, varargin)
     
     [vars, names, code] = PSDM.fgen.makeSetupCode(E, P, opt);
     [vars, names, code] = PSDM.fgen.makePCode(vars, names, code, opt);
-    code.tau = PSDM.fgen.makeYbCode(vars.E, vars.P, 'tau(:, i)', 'Y_i', names, opt);
+    
+    tauName = arrayfun(@(i) sprintf('tau[startInd+%d]', i), 0:DOF-1, 'UniformOutput', false);
+    [tauCode, names, code] = PSDM.fgen.makeYbCode(vars.E, vars.P, tauName, 'Y_i', names, code, opt);
+    code.tau = tauCode;
         
     %% Make function
     
     [funcDir, funcName, ~] = fileparts(filename);
     
     dir = fileparts(mfilename('fullpath'));
-    funcText = fileread( fullfile(dir, 'templates', 'inverseDynamics.m') );
+    funcText = fileread( fullfile(dir, 'templates', opt.language, sprintf('inverseDynamics.%s', opt.language(1)) ) );
     
-    funcText = strrep(funcText, '%SETUP1_CODE%', code.setup1);
-    funcText = strrep(funcText, '%SETUP2_CODE%', code.setup2);
-    funcText = strrep(funcText, '%EXTRA_CODE%', code.extra);
-    funcText = strrep(funcText, '%TAU_CODE%', code.tau);
+    funcText = strrep(funcText, PSDM.fgen.getTag('SETUP1_CODE', opt), code.setup1);
+    funcText = strrep(funcText, PSDM.fgen.getTag('SETUP2_CODE', opt), code.setup2);
+    funcText = strrep(funcText, PSDM.fgen.getTag('EXTRA_CODE', opt), code.extra);
+    funcText = strrep(funcText, PSDM.fgen.getTag('TAU_CODE', opt), code.tau);
     
     out_args = 'tau';
     if opt.return_Y
@@ -75,6 +82,12 @@ function makeInverseDynamics(filename, E, P, varargin)
         sprintf('function %s = %s(Q, Qd, Qdd, Theta)', out_args, funcName));
     funcText = strrep(funcText, '%p%', ...
         sprintf('%d', size(E,2)));
+    
+    % Replace other terms
+    for i = 1:5
+        funcText = strrep(funcText, sprintf('_%dDOF_', i), mat2str(i*DOF));
+    end
+    funcText = strrep(funcText, '_ell_', mat2str(size(P, 2)));
     
     if opt.parallel
         % Change loop to a parallel loop
@@ -96,7 +109,8 @@ function makeInverseDynamics(filename, E, P, varargin)
 
         % Create configuration object of class 'coder.MexCodeConfig'.
         cfg = coder.config('mex');
-        cfg.GenerateReport = true;
+        % cfg = coder.config('lib');
+        cfg.GenerateReport = false;
         cfg.ReportPotentialDifferences = false;
         cfg.IntegrityChecks = false;
         cfg.ResponsivenessChecks = false;

@@ -1,4 +1,4 @@
-function tauCode = makeYbCode( E, P, tauName, Yname, names, opt)
+function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code, opt)
 
     % Break out some variables
     DOF = size(P, 3);
@@ -10,7 +10,12 @@ function tauCode = makeYbCode( E, P, tauName, Yname, names, opt)
     
     %% Check if empty set was given
     if m == 0 || n == 0
-        tauCode = sprintf('%s = 0.0;\n', tauName);
+        switch opt.language
+            case 'matlab'
+                tauCode = sprintf('%s = 0.0;\n', tauName);
+            case 'c'
+                tauCode = sprintf('\t\tdouble %s = 0.0;\n', tauName);
+        end
         return;
     end
     
@@ -20,22 +25,7 @@ function tauCode = makeYbCode( E, P, tauName, Yname, names, opt)
     % (are identically zero)
     wasSkipped = zeros((ell*DOF), 1, 'logical');
     tau_j = cell(ell*DOF, 1);
-    
-    % Figure out percentage of "zero" elements in this matrix. If above a
-    % threshold, instead of doing a matrix multiplication, just mulitply
-    % the elements individually.
-    nels = DOF*ell;
-    nz = 0;
-    for k = 1:ell
-        for j = 1:DOF
-            if ~any(P_mask(:, k, j))
-                nz = nz+1;
-            end
-        end
-    end
-    
-    % Do individual mult?
-    doIndiv = nz/nels > 0.35 && ~opt.return_Y;
+    extra_j = cell(ell*DOF, 1);
     
     c1 = 0; % Count position in Y (index)
     c2 = 0; % Count position in non-skipped vector of Y
@@ -81,64 +71,38 @@ function tauCode = makeYbCode( E, P, tauName, Yname, names, opt)
                 end
             end
             
-            if ~doIndiv
-                name = sprintf('%s(%d)', Yname, sub2ind([DOF, ell], j, k));
-            else
-                name = sprintf('%s_%d', Yname, sub2ind([DOF, ell], j, k));
-            end
+            % Get the indexed position of this value of Y
+            subInd = sub2ind([DOF, ell], j, k);
+            
+            % Make name
+            name = sprintf('%s_p%d', Yname, subInd);
 
             % Call genCode for element
-            tau_j{c2} = PSDM.fgen.genCode(Su_t, ...
+            [tau_j{c2}, names, code] = PSDM.fgen.genCode(Su_t, ...
                 name, ...
                 sprintf('%s_%d', Yname, c2),...
-                names_t, opt, 1);
+                names_t, names, code, opt, 1);
             
-            if doIndiv
-                codeRowEls{c4} = sprintf('%s.*Theta(%d)', name, k);
-            end
+            % Add element to row code (will be concatenated with addition
+            % later
+            codeRowEls{c4} = sprintf('%s*Theta[%d]', name, k-1);
             
         end
         
         % Code row, if doing things individually
-        if doIndiv
-            if c4 > 0
-                codeRows{j} = strjoin(codeRowEls, '+');
-            else 
-                codeRows{j} = '0.0';
-            end
+        if c4 > 0
+            codeRows{j} = strjoin(codeRowEls, '+');
+        else 
+            codeRows{j} = '0.0';
         end
                 
     end
         
     %% Generate code to combine tau
     
-    if ~ doIndiv
-        tauCode = sprintf('%s = zeros(%d, 1); \n %s', ...
-            Yname, ell*DOF, strjoin(regexprep(tau_j(1:c2), '\n+', '\n'), '\n'));
-    else
-        tauCode = strjoin(regexprep(tau_j(1:c2), '\n+', '\n'), '\n');
+    tauCode = strjoin(regexprep(tau_j(1:c2), '\n+', '\n'), '\n\t\t');
+    for i = 1:DOF
+        tauCode = sprintf('%s\n\t\t%s = %s;', tauCode, tauName{i}, codeRows{i});
     end
-            
-    % Append final multiplication
-    if opt.return_Y
-        tauCode = sprintf(['%s \n', ...
-                            'Y(:, :, i) = reshape(%s, [%d, %d]);\n', ...
-                            'if calcTau\n', ...
-                            '\t%s = reshape(%s, [%d, %d]) * Theta;\n', ...
-                            'end\n'], ...
-                            tauCode, Yname, DOF, ell, tauName, Yname, DOF, ell);
-    else
-        if ~doIndiv
-            tauCode = sprintf('%s \n%s = reshape(%s, [%d, %d])*Theta;', tauCode, tauName, Yname, DOF, ell);
-        else
-            if DOF > 1
-                tauCode = sprintf('%% Indiv done. \n%s\n%s = [%s];', tauCode, tauName, strjoin(codeRows, ';\n') );
-            else
-                tauCode = sprintf('%% Indiv done. \n%s\n%s = %s;', tauCode, tauName, strjoin(codeRows, ';') );
-            end
-        end
-    end
-
-
-   
+       
 end

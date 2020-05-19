@@ -1,4 +1,4 @@
-function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
+function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, code, opt, depth)
     % GENCODE given a set S, generates code for this set by gradually
     % multiplying in P row by row.
 
@@ -8,13 +8,13 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
     
     % If empty set, return zero
     if m < 1
-        setCode = sprintf('%s = 0;\n', name);
+        setCode = sprintf('\t\tdouble %s = 0;\n', name);
         return;
     end
     if n < 1
         % Just need to sum all the P's
-        Psum = sum(cellfun(@str2num, names.y));
-        setCode = sprintf('%s = %s;\n', name, mat2str(Psum));
+        Psum = sum(cellfun(@str2num, names_t.y));
+        setCode = sprintf('\t\tdouble %s = %s;\n', name, mat2str(Psum));
         return;
     end
 
@@ -39,7 +39,7 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
         name_i = name;
         final = true;
     else
-        name_i = sprintf('%s_%dp', name_prefix, depth);
+        name_i = sprintf('%s_d%d', name_prefix, depth);
         final = false;
     end
     
@@ -48,6 +48,7 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
     c = 0;
     yCode = cell(0,0);
     yNames = cell(m2, 1);
+    codeNameInd = zeros(m2, 1);
     for i = 1:m2
         
         % Get the element of second set
@@ -80,21 +81,21 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
             for k = 1:m1i
                 if s1_empty(k)
                     % If its empty, just use its name in the formula
-                    terms{k} = sprintf('%s', names.y{s1_ind(k)});
+                    terms{k} = sprintf('%s', names_t.y{s1_ind(k)});
                 else
                     % Otherwise, we need to multiply with the correct value
                     % of P. However, we also avoid doing that if the value
                     % is +- 1.
                     
-                    switch names.y{s1_ind(k)}
+                    switch names_t.y{s1_ind(k)}
                         case '1'
-                            terms{k} = sprintf('%s', names.gamma{ s1(1,k) }{ 1 });
+                            terms{k} = sprintf('%s', names_t.gamma{ s1(1,k) }{ 1 });
                         case '-1'
                             forwardFlag = false;
-                            terms{k} = sprintf('-%s', names.gamma{ s1(1,k) }{ 1 });
+                            terms{k} = sprintf('-%s', names_t.gamma{ s1(1,k) }{ 1 });
                         otherwise
                             forwardFlag = false;
-                            terms{k} = sprintf('%s.*%s', names.gamma{ s1(1,k) }{ 1 }, names.y{s1_ind(k)});
+                            terms{k} = sprintf('%s*%s', names_t.gamma{ s1(1,k) }{ 1 }, names_t.y{s1_ind(k)});
                     end
                 end
             end
@@ -105,24 +106,58 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
                 % name.
                 yNames{i} = terms{1};
             else
-                % Otherwise, make a new formula and concate the terms with
-                % addition
-                c = c+1;
-                yCode{c} = strjoin(terms, '+');
-                yNames{i} = sprintf('%s(%d)', name_i, c);
+                % Concatenate terms into a single addition
+                code_i = strjoin(terms, '+');
+
+                % Check if this set of terms has been already calculated
+                alreadyFound = strcmp(code_i, code.all);
+%                 alreadyFound = strcmp(code_i, yCode);
+                
+                if ~any(alreadyFound)
+                    % New term, define it
+                    c = c+1;
+                    yCode{c} = code_i;
+                    codeNameInd(c) = i;
+                    if final
+                        yNames{i} = name_i;
+                    else
+                        yNames{i} = sprintf('%s_p%d', name_i, c);
+                    end
+                    
+                    % Add to list of all terms
+                    [code, names] = addNameCode(code_i, yNames{i}, code, names);
+                    
+                else
+                    
+                    % Just forward along the name
+                    ind = find(alreadyFound, 1);
+                    yNames{i} = names.all{ ind };
+%                     yNames{i} = yNames{ codeNameInd( ind ) };
+                    yNames{i} = names.all{ ind };
+                    if final
+                        % Need to write out an assignment here
+                        c = c+1;
+                        yCode{c} = yNames{i};
+                    end
+                    
+                end
             end
             
         else
             % s1 is single and empty, so just forward along the name
             
-            yNames{i} = names.y{s1_ind(1)};
+            yNames{i} = names_t.y{s1_ind(1)};
         end
                 
     end
     
     % Make code
     if c>0
-        setCode = PSDM.fgen.assignVector( name_i, yCode, opt );
+        if final
+            setCode = sprintf('\t\tdouble %s = %s;', name_i, yCode{1} );
+        else
+            setCode = PSDM.fgen.assignVector( name_i, yCode, opt );
+        end
     else
         setCode = '';
     end
@@ -130,17 +165,26 @@ function [setCode] = genCode(S, name, name_prefix, names, opt, depth)
     % Call recursively
     if ~ final
         % Define variables for recursion
-        names_s = names;
+        names_s = names_t;
         names_s.y = yNames;
 
-        names_s.gamma{1} = names.gamma{1}(2:end);
-        names_s.gamma{2} = names.gamma{2}(2:end);
+        names_s.gamma{1} = names_t.gamma{1}(2:end);
+        names_s.gamma{2} = names_t.gamma{2}(2:end);
         
         % Call recursively
-        [setCode_s] = PSDM.fgen.genCode(Su2, name, name_prefix, names_s, opt, depth+1);
+        [setCode_s, names, code] = PSDM.fgen.genCode(Su2, name, name_prefix, names_s, names, code, opt, depth+1);
         
         % Combine code
         setCode = sprintf('%s\n\n%s', setCode, setCode_s);
+        
     end
     
+    
+end
+
+
+function [code, names] = addNameCode(codeAdd, nameAdd, code, names)
+    N = size(code.all, 1);
+    code.all{N+1, 1} = codeAdd;
+    names.all{N+1, 1} = nameAdd;
 end
