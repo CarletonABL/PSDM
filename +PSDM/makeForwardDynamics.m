@@ -49,6 +49,8 @@ function makeForwardDynamics(filename, E, P, varargin)
     p.addOptional('mex', false);
     p.addOptional('help', true);
     p.addOptional('return_all', false);
+    p.addOptional('tol', 1e-9);
+    
     p.parse(varargin{:});
     opt = p.Results;
     

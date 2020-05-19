@@ -48,6 +48,7 @@ function makeInverseDynamics(filename, E, P, varargin)
     p.addOptional('mex', false);
     p.addOptional('return_Y', false);
     p.addOptional('help', true);
+    p.addOptional('tol', 1e-9);
 
     p.parse(varargin{:});
     opt = p.Results;

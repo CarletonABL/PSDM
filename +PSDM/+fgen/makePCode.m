@@ -1,8 +1,5 @@
 function [vars, names, code] = makePCode(vars, names, code, opt)
     % MAKEPCODE Generates the code for defining P in a function
-
-    tol = 5e-9;
-    ratTol = 1e-11;
     
     % Get vars
     DOF = vars.DOF;
@@ -15,14 +12,14 @@ function [vars, names, code] = makePCode(vars, names, code, opt)
     P(gravMask, :, :) = P(gravMask, :, :) .* utilities.g;
     
     % Round out small terms
-    P( abs(P) < tol ) = 0;
-    P( abs(P - 1) < tol) = 1;
+    P( abs(P) < opt.tol ) = 0;
+    P( abs(P - 1) < opt.tol) = 1;
     
     % Do a rational rounding
-    P = utilities.ratRound(P, ratTol);
+    P = utilities.ratRound(P, opt.tol);
     
     % Define mask
-    P_mask = abs(P) > tol;
+    P_mask = abs(P) > opt.tol;
     vars.P = P;
     vars.P_mask = P_mask;
 
