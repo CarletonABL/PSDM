@@ -1,7 +1,8 @@
 function [vars, names, code] = makePCode(vars, names, code, opt)
     % MAKEPTHETACODE Generates the code for defining PTheta in a function
 
-    tol = 1e-11;
+    tol = 5e-9;
+    ratTol = 1e-11;
     
     % Get vars
     DOF = vars.DOF;
@@ -18,7 +19,7 @@ function [vars, names, code] = makePCode(vars, names, code, opt)
     P( abs(P - 1) < tol) = 1;
     
     % Do a rational rounding
-    P = utilities.ratRound(P, tol);
+    P = utilities.ratRound(P, ratTol);
     
     % Define mask
     P_mask = abs(P) > tol;

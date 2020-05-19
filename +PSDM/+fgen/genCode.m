@@ -8,13 +8,15 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
     
     % If empty set, return zero
     if m < 1
-        setCode = sprintf('\t\tdouble %s = 0;\n', name);
+        setCode = sprintf('\t\t%s = 0;\n', name);
+        names = PSDM.fgen.addToNames(name, names);
         return;
     end
     if n < 1
         % Just need to sum all the P's
         Psum = sum(cellfun(@str2num, names_t.y));
-        setCode = sprintf('\t\tdouble %s = %s;\n', name, mat2str(Psum));
+        setCode = sprintf('%s = %s;\n', name, mat2str(Psum));
+        names = PSDM.fgen.addToNames(name, names);
         return;
     end
 
@@ -95,7 +97,8 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
                             terms{k} = sprintf('-%s', names_t.gamma{ s1(1,k) }{ 1 });
                         otherwise
                             forwardFlag = false;
-                            terms{k} = sprintf('%s*%s', names_t.gamma{ s1(1,k) }{ 1 }, names_t.y{s1_ind(k)});
+                            terms{k} = sprintf('%s*%s', ...
+                                names_t.y{s1_ind(k)}, names_t.gamma{ s1(1,k) }{ 1 });
                     end
                 end
             end
@@ -107,13 +110,13 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
                 yNames{i} = terms{1};
             else
                 % Concatenate terms into a single addition
-                code_i = strjoin(terms, '+');
+                code_i = strrep( strjoin(terms, '+'), '+-', '-');
 
                 % Check if this set of terms has been already calculated
-                alreadyFound = strcmp(code_i, code.all);
+                name_already = PSDM.fgen.findEquivNames(code_i, names, code);
 %                 alreadyFound = strcmp(code_i, yCode);
                 
-                if ~any(alreadyFound)
+                if isempty(name_already)
                     % New term, define it
                     c = c+1;
                     yCode{c} = code_i;
@@ -130,10 +133,8 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
                 else
                     
                     % Just forward along the name
-                    ind = find(alreadyFound, 1);
-                    yNames{i} = names.all{ ind };
-%                     yNames{i} = yNames{ codeNameInd( ind ) };
-                    yNames{i} = names.all{ ind };
+                    % ind = find(alreadyFound, 1);
+                    yNames{i} = name_already;
                     if final
                         % Need to write out an assignment here
                         c = c+1;
@@ -154,9 +155,10 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
     % Make code
     if c>0
         if final
-            setCode = sprintf('\t\tdouble %s = %s;', name_i, yCode{1} );
+            setCode = sprintf('%s = %s;', name_i, yCode{1} );
+            names = PSDM.fgen.addToNames(name_i, names);
         else
-            setCode = PSDM.fgen.assignVector( name_i, yCode, opt );
+            [setCode, names] = PSDM.fgen.assignVector( name_i, yCode, names, opt );
         end
     else
         setCode = '';
@@ -175,7 +177,7 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
         [setCode_s, names, code] = PSDM.fgen.genCode(Su2, name, name_prefix, names_s, names, code, opt, depth+1);
         
         % Combine code
-        setCode = sprintf('%s\n\n%s', setCode, setCode_s);
+        setCode = sprintf('%s\n\n\t\t%s', setCode, setCode_s);
         
     end
     

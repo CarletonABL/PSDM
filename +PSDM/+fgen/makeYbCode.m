@@ -10,12 +10,7 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
     
     %% Check if empty set was given
     if m == 0 || n == 0
-        switch opt.language
-            case 'matlab'
-                tauCode = sprintf('%s = 0.0;\n', tauName);
-            case 'c'
-                tauCode = sprintf('\t\tdouble %s = 0.0;\n', tauName);
-        end
+        tauCode = sprintf('\t\tdouble %s = 0.0;\n', tauName);
         return;
     end
     
@@ -53,45 +48,61 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
             end
             
             % Increment counter 
-            c2 = c2+1;
             c4 = c4 + 1;
             
             % Get reduced E matrix, and corresponding elements of gamma
             Su_t = E(colMask, rowMask);
-            names_t.gamma{1} = names.gamma{1}(colMask);
-            names_t.gamma{2} = names.gamma{2}(colMask);
-
-            % Store the text of each element of P in a cell array for use.
-            names_t.y = cell(nnz(rowMask),1);
-            c3 = 0;
-            for i = 1:m
-                if rowMask(i)
-                    c3 = c3+1;
-                    names_t.y{c3} = mat2str(P(i, k, j));
+            
+            if isempty(Su_t)
+                % All we need is the theta vector here.
+                coef = mat2str(P(rowMask, k, j));
+                switch coef
+                    case '1'
+                        codeRowEls{c4} = sprintf('Theta[%d]', k-1);
+                    case '-1'
+                        codeRowEls{c4} = sprintf('-Theta[%d]', k-1);
+                    otherwise
+                        codeRowEls{c4} = sprintf('%s*Theta[%d]', coef, k-1);
                 end
-            end
-            
-            % Get the indexed position of this value of Y
-            subInd = sub2ind([DOF, ell], j, k);
-            
-            % Make name
-            name = sprintf('%s_p%d', Yname, subInd);
+                
+            else
+                c2 = c2+1;
+                names_t.gamma{1} = names.gamma{1}(colMask);
+                names_t.gamma{2} = names.gamma{2}(colMask);
 
-            % Call genCode for element
-            [tau_j{c2}, names, code] = PSDM.fgen.genCode(Su_t, ...
-                name, ...
-                sprintf('%s_%d', Yname, c2),...
-                names_t, names, code, opt, 1);
+                % Store the text of each element of P in a cell array for use.
+                names_t.y = cell(nnz(rowMask),1);
+                c3 = 0;
+                for i = 1:m
+                    if rowMask(i)
+                        c3 = c3+1;
+                        names_t.y{c3} = mat2str(P(i, k, j));
+                    end
+                end
+
+                % Get the indexed position of this value of Y
+                subInd = sub2ind([DOF, ell], j, k);
+
+                % Make name
+                name = sprintf('%s_p%d', Yname, subInd);
+
+                % Call genCode for element
+                [tau_j{c2}, names, code] = PSDM.fgen.genCode(Su_t, ...
+                    name, ...
+                    sprintf('%s_%d', Yname, c2),...
+                    names_t, names, code, opt, 1);
             
-            % Add element to row code (will be concatenated with addition
-            % later
-            codeRowEls{c4} = sprintf('%s*Theta[%d]', name, k-1);
+                % Add element to row code (will be concatenated with addition
+                % later
+                codeRowEls{c4} = sprintf('%s*Theta[%d]', name, k-1);
+                
+            end
             
         end
         
         % Code row, if doing things individually
         if c4 > 0
-            codeRows{j} = strjoin(codeRowEls, '+');
+            codeRows{j} = strrep( strjoin(codeRowEls, '+'), '+-', '-');
         else 
             codeRows{j} = '0.0';
         end
@@ -100,7 +111,12 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
         
     %% Generate code to combine tau
     
-    tauCode = strjoin(regexprep(tau_j(1:c2), '\n+', '\n'), '\n\t\t');
+    if c2 > 0
+        tauCode = strjoin(regexprep(tau_j(1:c2), '\n+', '\n'), '\n\t\t');
+    else
+        tauCode = '';
+    end
+    
     for i = 1:DOF
         tauCode = sprintf('%s\n\t\t%s = %s;', tauCode, tauName{i}, codeRows{i});
     end

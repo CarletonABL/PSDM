@@ -26,9 +26,12 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
     code.setup2 = '';
     code.extra = '';
     code.tau = '';
+    code.name_def = '';
     
     code.all = cell(0, 1);
     names.all = cell(0, 1);
+    
+    names.def = cell(0, 1);
     
     %% Make a list of gamma vectors from input
     
@@ -47,29 +50,16 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
     names.gamma{1} = repelem({''}, n);
     names.gamma{2} = repelem({''}, n);
     for i = 1:nnz(colMask)
-        switch opt.language
-            case 'matlab'
-                names.gamma{1}{ ind1(i) } = sprintf('gi(%d)', ind1(i));
-            case 'c'
-                names.gamma{1}{ ind1(i) } = sprintf('gi[%d]', ind1(i)-1);
-        end
+        names.gamma{1}{ ind1(i) } = sprintf('gi[%d]', ind1(i)-1);
     end
     
     for i = 1:nnz(squareMask)
-        switch opt.language
-            case 'matlab'
-                names.gamma{2}{ ind2(i) } = sprintf('gi2(%d)', i);
-                code.gamma{2}{ i } = sprintf('gi(%d)^2', ind2(i));
-            case 'c'
-                names.gamma{2}{ ind2(i) } = sprintf('gi2_p%d', i);
-                code.gamma{2}{ i } = sprintf('gi[%d]*gi[%d]', ind2(i)-1, ind2(i)-1);
-        end
+        names.gamma{2}{ ind2(i) } = sprintf('gi2_p%d', i);
+        code.gamma{2}{ i } = sprintf('gi[%d]*gi[%d]', ind2(i)-1, ind2(i)-1);
     end
     
     % Assign variables
-    % code.gamma1 = PSDM.fgen.assignVector( 'gi1', code.gamma{1}, opt );
-    code.gamma2 = PSDM.fgen.assignVector( 'gi2', code.gamma{2}, opt );
-    % code.setup2 = strjoin( {code.gamma1, code.gamma2}, '\n' );
+    [code.gamma2, names] = PSDM.fgen.assignVector( 'gi2', code.gamma{2}, names, opt );
     code.setup2 = code.gamma2;
 
     % Some extra processing if we're doing forward dynamics

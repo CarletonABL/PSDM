@@ -42,6 +42,8 @@ function makeForwardDynamics(filename, E, P, varargin)
     funcText = strrep(funcText, PSDM.fgen.getTag('SETUP2_CODE', opt), code.setup2);
     funcText = strrep(funcText, PSDM.fgen.getTag('EXTRA_CODE', opt), code.extra);
     funcText = strrep(funcText, PSDM.fgen.getTag('TAU_CODE', opt), code.tau);
+    funcText = strrep(funcText, PSDM.fgen.getTag('NAME_DEF', opt), ...
+        sprintf('double %s;\n', strjoin(unique(names.def), ', ')));
     
     funcText = strrep(funcText, 'function Qdd = forwardDynamics(Q, Qd, tau, Theta)', ...
         sprintf('function Qdd = %s(Q, Qd, tau, Theta)', funcName));

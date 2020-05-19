@@ -10,6 +10,7 @@ void forwardDynamics(const double *Q, const double *Qd, const double *tau, const
 	double gi[_5DOF_];
 	double tauInd[_1DOF_];
 	double D[_Dsize_];
+	/*NAME_DEF*/
 
 	/* Prep some variables for the matrix inversions */
 	double sum;

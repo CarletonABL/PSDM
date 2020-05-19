@@ -8,6 +8,7 @@ void inverseDynamics(const double *Q, const double *Qd, const double *Qdd, const
 	int k;
 	int startInd;
 	double gi[_5DOF_];
+	/*NAME_DEF*/
 
 	/*SETUP1_CODE*/
 
@@ -26,7 +27,7 @@ void inverseDynamics(const double *Q, const double *Qd, const double *Qdd, const
 
 /*SETUP2_CODE*/
 
-/*TAU_CODE*/
+		/*TAU_CODE*/
 
 	}
 }
