@@ -210,7 +210,7 @@ The functions \texttt{PSDM.inverseDynamics} and \texttt{PSDM.forwardDynamics} wo
 PSDM.makeInverseDynamics(filename, E, P, Theta)
 PSDM.makeForwardDynamics(filename, E, P, Theta)
 \end{lstlisting}\vspace{1em}
-This will generate a matlab function defined as per the name given in the \texttt{filename} variable, with many optimizations done. This code can also be compiled into C code by giving additional options to the above functions. The generated functions are very fast.
+This will generate a c function defined as per the name given in the \texttt{filename} variable, with many optimizations done. This code can also be compiled into a MEX file to be used in matlab. These generated functiosn are very fast.
 
 \subsection{Complexity Reduction}
 This codebase also includes tools to reduce the complexity of the model without significantly reducing model quality. The usage of this is summarized in the help text of the function

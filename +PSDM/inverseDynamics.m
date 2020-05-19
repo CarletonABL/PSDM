@@ -1,4 +1,4 @@
-function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
+function [tau, Yb] = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     % INVERSEDYNAMICS Evaluates the inverse dynamics at a state Q, Qd, Qdd
     % from a pseudo-symbolic representation E, P and Theta
     %
@@ -34,7 +34,7 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     c = PSDM.config;
     if coder.target('matlab') && c.use_mex
          try
-            tau = PSDM.inverseDynamics_mex(E, P, Theta, Q, Qd, Qdd);
+            [tau, Yb] = PSDM.inverseDynamics_mex(E, P, Theta, Q, Qd, Qdd);
             return; 
          catch e
              warning("PSDM is not compiled! This code will run slowly without compilation. Recommend running PSDM.make");
@@ -47,10 +47,11 @@ function tau = inverseDynamics(E, P, Theta, Q, Qd, Qdd)
     
     % Get Yp
     Yp = PSDM.generateYp(Q, Qd, Qdd, E);
+    Yb = permute( utilities.blockprod(Yp, P) , [3 2 1]);
     
-    Phi_b = permute(utilities.blockprod(P, Theta), [1 3 2]);
+    % Phi_b = permute(utilities.blockprod(P, Theta), [1 3 2]);
     
     % Solve for torques
-    tau = (Yp * Phi_b)';
+    tau = squeeze( utilities.blockprod( Yb, Theta ) );
      
 end

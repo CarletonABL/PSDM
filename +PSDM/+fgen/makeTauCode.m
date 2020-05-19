@@ -1,4 +1,4 @@
-function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code, opt)
+function [tauCode, names, code] = makeTauCode( E, P, tauName, Yname, keepY, names, code, opt)
 
     % Break out some variables
     DOF = size(P, 3);
@@ -10,7 +10,7 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
     
     %% Check if empty set was given
     if m == 0 || n == 0
-        tauCode = sprintf('\t\tdouble %s = 0.0;\n', tauName);
+        tauCode = sprintf('\t\t%s = 0.0;\n', tauName);
         return;
     end
     
@@ -20,7 +20,7 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
     % (are identically zero)
     wasSkipped = zeros((ell*DOF), 1, 'logical');
     tau_j = cell(ell*DOF, 1);
-    extra_j = cell(ell*DOF, 1);
+    yCode = cell(ell*DOF, 1);
     
     c1 = 0; % Count position in Y (index)
     c2 = 0; % Count position in non-skipped vector of Y
@@ -44,6 +44,7 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
             % Assign value to skip
             if ~any(rowMask)
                 wasSkipped(c1) = true;
+                yCode{c1} = sprintf('%s[startIndY + %d] = 0.0;', Yname, (k-1)*DOF+j-1);
                 continue;
             end
             
@@ -56,6 +57,8 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
             if isempty(Su_t)
                 % All we need is the theta vector here.
                 coef = mat2str(P(rowMask, k, j));
+                yCode{c1} = sprintf('%s[startIndY + %d] = %s;', Yname, (k-1)*DOF+j-1, coef);
+
                 switch coef
                     case '1'
                         codeRowEls{c4} = sprintf('Theta[%d]', k-1);
@@ -85,6 +88,7 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
 
                 % Make name
                 name = sprintf('%s_p%d', Yname, subInd);
+                yCode{c1} = sprintf('%s[startIndY + %d] = %s;', Yname, (k-1)*DOF+j-1, name);
 
                 % Call genCode for element
                 [tau_j{c2}, names, code] = PSDM.fgen.genCode(Su_t, ...
@@ -119,6 +123,10 @@ function [tauCode, names, code] = makeYbCode( E, P, tauName, Yname, names, code,
     
     for i = 1:DOF
         tauCode = sprintf('%s\n\t\t%s = %s;', tauCode, tauName{i}, codeRows{i});
+    end
+    
+    if keepY
+        tauCode = sprintf('%s\n\n\t\t%s', tauCode, strjoin(yCode, '\n\t\t'));
     end
        
 end

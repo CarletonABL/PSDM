@@ -35,11 +35,6 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
     
     %% Make a list of gamma vectors from input
     
-    if strcmp(opt.alg, 'ID') && strcmp(opt.language, 'matlab')
-        % Pre-init tau
-        code.setup1 = sprintf('tau = coder.nullcopy(zeros(%d, N));\n', DOF);
-    end
-
     % some setup
     n = size(E, 1);
     ind = 1:n;
@@ -68,14 +63,6 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
         vars.accelMask_i = E((1:vars.DOF)+4*vars.DOF, :) > 0;
         vars.accelMask = any(vars.accelMask_i, 1);
         vars.Eind = E( :, ~ vars.accelMask);
-    end
-    
-    % Pre-init Y if we're returning regressor
-    if opt.return_Y
-        code.setup1 = sprintf(['Y = coder.nullcopy(zeros(%d, %d, N));\n',...
-                               'calcTau = nargout > 1 && nargin > 3 && ~isempty(Theta);\n', ...
-                               '%s'], ...
-                                DOF, ell, code.setup1);
     end
         
 end

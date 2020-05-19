@@ -1,13 +1,28 @@
+/*
+% _FUNCTIONNAME_.c Computes the inverse dynamic for a model, as per the E and P
+% matrices which were used to generate it.
+%
+% Calling syntax is:
+% 	_FUNCTIONNAME_(Q, Qd, tau, Theta, N, Qdd);
+% where
+%   - Q, Qd, Qdd are the joint variables and their first and second
+%     derivatives, respectively, in a _1DOF_xN matrix.
+%   - Theta is the regression vector, a _ell_ column vector.
+%   - tau is the joint torques, in a _1DOF_xN matrix.
+%
+% See also PSDM.makeForwardDynamics.
+ */
 
 #include "mex.h"
 #include <math.h>
 
-void forwardDynamics(const double *Q, const double *Qd, const double *tau, const double *Theta, int N, double *Qdd, double *tauInd, double *D)
+void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const double *Theta, int N, double *Qdd)
 {
 	int pos;
 	char i, j, k;
-	int startInd, startIndD;
+	int startInd;
 	double gi[_5DOF_];
+	double tauInd[_1DOF_];
 	double d[_Dsize_];
 	/*NAME_DEF*/
 
@@ -18,7 +33,6 @@ void forwardDynamics(const double *Q, const double *Qd, const double *tau, const
 	for (k = 0; k < _1DOF_; k++){
 		dInd[k] = k*(k+3)/2;
 		iInd[k] = k*(k+1)/2;
-		printf("dInd[%d] = %d; iInd[%d] = %d;\n", k, dInd[k], k, iInd[k]);
 	}
 
 	/*SETUP1_CODE*/
@@ -27,7 +41,6 @@ void forwardDynamics(const double *Q, const double *Qd, const double *tau, const
 
 		/* Define start index */
 		startInd = pos * _1DOF_;
-		startIndD = pos * _Dsize_;
 
 		for (k = 0; k < _1DOF_; k++){
 			gi[k] = Q[startInd+k];
@@ -42,16 +55,14 @@ void forwardDynamics(const double *Q, const double *Qd, const double *tau, const
 /*TAU_CODE*/
 
 		/* Invert matrix */
-		// Copy matrix, this way we can return it after if need be
-		for (i = 0; i<_Dsize_; i++) d[i] = D[ startIndD + i];
 
 		/* Do a destructive cholesky decomposition on D */
 		for (i = 0; i<_1DOF_; i++){
 			for (j = i; j<_1DOF_; j++){
 				sum = d[ i+iInd[j] ];
-				for (k = 0; k < i; k++){
+				for (k = 0; k<i; k++){
 					sum -= d[ k+iInd[i] ] * d[ k+iInd[j] ];
-				} 
+				}
 				if (i == j){
 					if (sum <= 0.0){
 						mexErrMsgTxt("Cholesky decomposition failed.");
@@ -63,23 +74,20 @@ void forwardDynamics(const double *Q, const double *Qd, const double *tau, const
 			}
 		}
 
-		for (i = 0; i<_Dsize_; i++) L[ startIndD + i] = d[i];
-
 		/* Now use this decomposition to solve system of linear equations */
 		for (i = 0; i<_1DOF_; i++){
-			sum = tau[ startInd+i ] - tauInd[startInd+i];
-			// printf("sum = %.5g\n", sum);
+			sum = tau[startInd + i] - tauInd[i];
 			for (k = 0; k < i; k++){
-				sum -= d[ k+iInd[i] ] * Qdd[ startInd+k ];
+				sum -= d[ k + iInd[i] ] * Qdd[ startInd + k ];
 			}
-			Qdd[ startInd+i ] = sum/d[ dInd[i] ];
+			Qdd[ startInd + i ] = sum/d[ dInd[i] ];
 		}
 		for (i=_1DOF_-1; i>=0; i--){
-			sum = Qdd[ startInd+i ];
+			sum = Qdd[ startInd + i ];
 			for (k = i+1; k < _1DOF_; k++){
-				sum -= d[ i+iInd[k] ] * Qdd[ startInd+k ];
+				sum -= d[ i + iInd[k] ] * Qdd[ startInd + k ];
 			}
-			Qdd[ startInd+i ] = sum/d[ dInd[i] ];
+			Qdd[ startInd + i ] = sum/d[ dInd[i] ];
 		}
 
 	}
@@ -95,8 +103,6 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	double *tau;
 	double *Theta;
 	double *Qdd;
-	double *D;
-	double *tauInd;
 	int N;
 
 
@@ -104,8 +110,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	if(nrhs!=4) {
         mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs","Wrong number of inputs.");
     }
-    if(nlhs!=3) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs","Three output required.");
+    if(nlhs>1) {
+        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs","Too many outputs requested!");
     }
     int k;
     for (k=0;k<4;k++){
@@ -134,13 +140,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
 
 	/* Initialize outputs */
  	plhs[0] = mxCreateDoubleMatrix(_1DOF_, N, mxREAL);
- 	plhs[1] = mxCreateDoubleMatrix(_1DOF_, N, mxREAL);
- 	plhs[2] = mxCreateDoubleMatrix(_Dsize_, N, mxREAL);
- 	plhs[3] = mxCreateDoubleMatrix(_Dsize_, N, mxREAL);
 	Qdd = mxGetPr(plhs[0]);
-	tauInd = mxGetPr(plhs[1]);
-	D = mxGetPr(plhs[2]);
 
 	/* Call routine */
-	forwardDynamics(Q, Qd, tau, Theta, N, Qdd, tauInd, D);
+	_FUNCTIONNAME_(Q, Qd, tau, Theta, N, Qdd);
 }

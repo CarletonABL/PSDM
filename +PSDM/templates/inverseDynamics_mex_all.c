@@ -1,21 +1,38 @@
-
+/*
+% _FUNCTIONNAME_.c Computes the inverse dynamic for a model, as per the E and P
+% matrices which were used to generate it.
+%
+% Calling syntax is:
+% 	_FUNCTIONNAME_(Q, Qd, Qdd, Theta, N, tau, Y);
+% where
+%   - Q, Qd, Qdd are the joint variables and their first and second
+%     derivatives, respectively, in a _1DOF_xN matrix (column major)
+%   - Theta is the regression vector, a _ell_ column vector.
+%	- N is the number of samples given
+%   - tau is the joint torques, in a _1DOF_xN matrix (column major)
+%   - Y is the regressor matrix (such that tau = Y*Theta), and is a 
+%     _1DOF_x_ell_xN page matrix (column major)
+%
+% See also PSDM.makeInverseDynamics.
+ */
 #include "mex.h"
 #include <math.h>
 
-void inverseDynamics(const double *Q, const double *Qd, const double *Qdd, const double *Theta, int N, double *tau)
+void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *Qdd, const double *Theta, int N, double *tau, double *Y)
 {
-	int i;
-	int k;
-	int startInd;
+	int pos;
+	char k;
+	int startInd, startIndY;
 	double gi[_5DOF_];
 	/*NAME_DEF*/
 
 	/*SETUP1_CODE*/
 
-	for (i = 0; i < N; i++){
+	for (pos = 0; pos < N; pos++){
 
 		/* Define start index */
-		startInd = i * _1DOF_;
+		startInd = pos * _1DOF_;
+		startIndY = pos * _1DOF_ * _ell_;
 
 		for (k = 0; k < _1DOF_; k++){
 			gi[k] = Q[startInd+k];
@@ -42,6 +59,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	double *Qdd;
 	double *Theta;
 	double *tau;
+	double *Y;
 	int N;
 
 
@@ -49,8 +67,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	if(nrhs!=4) {
         mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nrhs","Wrong number of inputs.");
     }
-    if(nlhs!=1) {
-        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs","One output required.");
+    if(nlhs>2) {
+        mexErrMsgIdAndTxt("MyToolbox:arrayProduct:nlhs","Too many outputs requested!");
     }
     int k;
     for (k=0;k<4;k++){
@@ -76,11 +94,14 @@ void mexFunction( int nlhs, mxArray *plhs[],
 	Qdd = mxGetDoubles(prhs[2]);
 	Theta = mxGetDoubles(prhs[3]);
 	N = mxGetN(prhs[0]);
+	const mwSize dimsY[] = {_1DOF_, _ell_, N};
 
 	/* Initialize outputs */
  	plhs[0] = mxCreateDoubleMatrix(_1DOF_, N, mxREAL);
+ 	plhs[1] = mxCreateNumericArray(3, dimsY, mxDOUBLE_CLASS, mxREAL);
 	tau = mxGetPr(plhs[0]);
+	Y = mxGetPr(plhs[1]);
 
 	/* Call routine */
-	inverseDynamics(Q, Qd, Qdd, Theta, N, tau);
+	_FUNCTIONNAME_(Q, Qd, Qdd, Theta, N, tau, Y);
 }

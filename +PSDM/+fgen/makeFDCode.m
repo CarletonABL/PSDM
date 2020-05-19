@@ -4,18 +4,13 @@ function [vars, names, code] = makeFDCode(vars, names, code, opt)
     DOF = vars.DOF;
 
     %% Step 1: Make induced torque code
-    switch opt.language
-        case 'matlab'
-            tauIndName = 'tau(:, i)';
-        case 'c'
-            if opt.return_all
-                tauIndName = arrayfun(@(i) sprintf('tauInd[startInd + %d]', i), 0:DOF-1, 'UniformOutput', false);
-            else
-                tauIndName = arrayfun(@(i) sprintf('tauInd[%d]', i), 0:DOF-1, 'UniformOutput', false);
-            end
+    if opt.return_all
+        tauIndName = arrayfun(@(i) sprintf('tauInd[startInd + %d]', i), 0:DOF-1, 'UniformOutput', false);
+    else
+        tauIndName = arrayfun(@(i) sprintf('tauInd[%d]', i), 0:DOF-1, 'UniformOutput', false);
     end
     
-    [tauIndCode, names, code] = PSDM.fgen.makeYbCode(vars.E_induced, vars.P_induced, tauIndName, 'Y_ind', names, code, opt);
+    [tauIndCode, names, code] = PSDM.fgen.makeTauCode(vars.E_induced, vars.P_induced, tauIndName, 'Y_ind', false, names, code, opt);
     code.tau_ind = tauIndCode;
     
     %% Step 2: Make code for each element of D
@@ -35,15 +30,10 @@ function [vars, names, code] = makeFDCode(vars, names, code, opt)
             E_ij = vars.E_accel{j};
             P_ij = vars.P_accel{j}(:, :, i);
             
-            if opt.return_all
-                Dname = sprintf('D[startIndD+%d]', c-1);
-            else
-                Dname = sprintf('D[%d]', c-1);
-            end
-            
-            [Di_code, names, code] = PSDM.fgen.makeYbCode(E_ij, P_ij, ...
+            Dname = sprintf('d[%d]', c-1);
+            [Di_code, names, code] = PSDM.fgen.makeTauCode(E_ij, P_ij, ...
                     {Dname}, sprintf('Y_D%d%d', i, j), ...
-                    names, code, opt);
+                    false, names, code, opt);
             code.D{c} = Di_code;
             
         end
