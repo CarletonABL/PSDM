@@ -1,4 +1,6 @@
 function text = makeReplacements(text, vars, names, code)
+    % MAKEREPLACEMENTS Makes the appropriate substitutions in the real-time
+    % code.
 
     text = strrep(text, '/*SETUP1_CODE*/', code.setup1);
     text = strrep(text, '/*SETUP2_CODE*/', removeNewlines(code.setup2));

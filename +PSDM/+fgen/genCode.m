@@ -1,6 +1,20 @@
 function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, code, opt, depth)
     % GENCODE given a set S, generates code for this set by gradually
     % multiplying in P row by row.
+    %
+    % INPUTS: 
+    %   - S: The set, in E notation
+    %   - name: The name of the final variable.
+    %   - name_prefix: The prefix to give to intermediate variables.
+    %   - names_t: The "trimmed" set of names to use in codegen.
+    %   - names: the full names object
+    %   - code: The full code object
+    %   - opt: The options object.
+    %   - depth: The current recursion depth
+    %
+    % OUTPUTS:
+    %   - setCode: The code for the current set.
+    %   - names, code: The updated code and names objects.
 
     % Break out variables
     n = size(S, 1);
@@ -88,7 +102,6 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
                     % Otherwise, we need to multiply with the correct value
                     % of P. However, we also avoid doing that if the value
                     % is +- 1.
-                    
                     switch names_t.y{s1_ind(k)}
                         case '1'
                             terms{k} = sprintf('%s', names_t.gamma{ s1(1,k) }{ 1 });
@@ -114,7 +127,6 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
 
                 % Check if this set of terms has been already calculated
                 name_already = PSDM.fgen.findEquivNames(code_i, names, code);
-%                 alreadyFound = strcmp(code_i, yCode);
                 
                 if isempty(name_already)
                     % New term, define it
@@ -133,7 +145,6 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
                 else
                     
                     % Just forward along the name
-                    % ind = find(alreadyFound, 1);
                     yNames{i} = name_already;
                     if final
                         % Need to write out an assignment here
@@ -146,8 +157,8 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
             
         else
             % s1 is single and empty, so just forward along the name
-            
             yNames{i} = names_t.y{s1_ind(1)};
+            
         end
                 
     end
@@ -181,9 +192,9 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
         
     end
     
-    
 end
 
+%% HELPER FUNCTIONS
 
 function [code, names] = addNameCode(codeAdd, nameAdd, code, names)
     N = size(code.all, 1);

@@ -1,5 +1,5 @@
 function [vars, names, code] = makePCode(vars, names, code, opt)
-    % MAKEPTHETACODE Generates the code for defining PTheta in a function
+    % MAKEPCODE Generates the code for defining P in a function
 
     tol = 5e-9;
     ratTol = 1e-11;

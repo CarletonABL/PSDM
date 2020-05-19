@@ -1,4 +1,5 @@
 function [vars, names, code] = makeFDCode(vars, names, code, opt)
+    % MAKEFDCODE Makes the code for the forward dynamics.
 
     % Break out some variables
     DOF = vars.DOF;
@@ -14,6 +15,8 @@ function [vars, names, code] = makeFDCode(vars, names, code, opt)
     code.tau_ind = tauIndCode;
     
     %% Step 2: Make code for each element of D
+    
+    % Trim down names
     names_acc = names;
     names_acc.gamma{1} = names.gamma{1}(1:(3*DOF));
     names_acc.gamma{2} = names.gamma{2}(1:(3*DOF));

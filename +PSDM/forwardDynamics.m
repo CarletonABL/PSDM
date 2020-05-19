@@ -30,17 +30,6 @@ function [Qdd, tau_induced, D] = forwardDynamics(E, P, Theta, Q, Qd, tau)
     assert(size(P, 2) == size(Theta, 1), "P and Theta are not congruently sized!");
     assert(size(E, 2) == size(P, 1), "P and E are not congruently sized!");
     
-    %% Run mex, if possible
-    c = PSDM.config;
-    if coder.target('matlab') && c.use_mex
-         try
-            [Qdd, tau_induced, D] = PSDM.forwardDynamics_mex(E, P, Theta, Q, Qd, tau);
-            return; 
-         catch
-             warning("PSDM is not compiled! PSDM.forwardDynamics will run slowly without compilation. Recommend running PSDM.make");
-         end
-    end
-
     %% Start function
     
     % Need to extract the acceleration terms from E, into a mask
@@ -68,9 +57,10 @@ function [Qdd, tau_induced, D] = forwardDynamics(E, P, Theta, Q, Qd, tau)
     for i = 1:DOF
         PTheta_induced(:, i) = P_induced(:, :, i) * Theta;
     end
+    Phi_induced = squeeze( utilities.blockprod( P_induced, Theta ) );
     
     % Calculate induced torques
-    tau_induced = (Yp(:, ~accelMaskAll) * PTheta_induced)';
+    tau_induced = (Yp(:, ~accelMaskAll) * Phi_induced)';
     
     % Build mass matrix by evaluating torques with Qdd = ones at only the
     % rows of P and columns of Yp associated with acceleration terms.
@@ -84,8 +74,7 @@ function [Qdd, tau_induced, D] = forwardDynamics(E, P, Theta, Q, Qd, tau)
             utilities.iparfor( ...
                 @(i) buildDColumn(Paccel(accelMask_trim(i, :), :, :), ...
                           Theta, ...
-                          Yp_accel(:, accelMask_trim(i, :)), ...
-                          DOF), ...
+                          Yp_accel(:, accelMask_trim(i, :))), ...
                 DOF, ...
                 [DOF, N], false), ...
             [1 3 2]);
@@ -100,16 +89,11 @@ function [Qdd, tau_induced, D] = forwardDynamics(E, P, Theta, Q, Qd, tau)
     
 end
 
-function Dcol = buildDColumn(Paccel_i, Theta, Yp_accel_i, DOF)
+function Dcol = buildDColumn(Paccel_i, Theta, Yp_accel_i)
     % Builds up the ith column of the mass matrix D
 
-    % Pre-multiply P and Theta
-    PTheta_accel_i = zeros( size(Paccel_i, 1), DOF );
-    for j = 1:DOF
-        PTheta_accel_i(:, j) = Paccel_i(:, :, j) * Theta;
-    end
-    
+    Phi_accel_i = squeeze( utilities.blockprod( Paccel_i, Theta ) );
     % Get torques with Qdd_i = 1, resulting in D.
-    Dcol = (Yp_accel_i * PTheta_accel_i)';
+    Dcol = (Yp_accel_i * Phi_accel_i)';
 
 end

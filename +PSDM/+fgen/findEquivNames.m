@@ -1,4 +1,16 @@
 function name_i = findEquivNames(code_i, names, code)
+    % FINDEQUIVNAMES Checks all previously generated code to see if a
+    % certain bit of code has already been executed by the program, and
+    % just forward along the name if so.
+    %
+    % INPUTS:
+    %   - code_i: The code for the current element.
+    %   - names: The full names object
+    %   - code: The full code object.
+    %   
+    % OUTPUTS: 
+    %   - name_i: The name of the found equivalent code. If no code found,
+    %       will return name_i = '';
 
     N = numel(code.all);
 
