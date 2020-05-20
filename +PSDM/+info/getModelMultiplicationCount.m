@@ -15,10 +15,13 @@ function S = getModelMultiplicationCount(E, P)
     Nm3 = DOF*ell;
     Na3 = DOF*(ell-1);
     
+    % Number of multiplications to make gamma
+    Nm4 = 2*DOF;
+    
     S.Nm1 = Nm1;
     S.Nm2 = Nm2;
     S.Na2 = Na2;
     S.Na = Na2 + Na3;
-    S.Nm = Nm1 + Nm2 + Nm3;
+    S.Nm = Nm1 + Nm2 + Nm3 + Nm4;
     
 end
