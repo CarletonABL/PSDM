@@ -144,7 +144,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("MyToolbox:arrayProduct:notRowVector","Wrong number of rows in input matrices.");
     }
 	/* check that number of rows in second input argument is 1 */
-    if(mxGetM(prhs[3])!=_ell_ && mxGetN(prhs[3])!=1) {
+    if(mxGetM(prhs[3])!=_ell_ || mxGetN(prhs[3])!=1) {
         mexErrMsgIdAndTxt("MyToolbox:arrayProduct:notRowVector","Theta is the wrong size.");
     }
 
