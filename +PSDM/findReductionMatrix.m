@@ -81,7 +81,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
     b = size(B_star, 1);
     
     % Get the pseudoinverse.
-    P_star = utilities.pinv2(B_star);
+    P_star = utilities.pinv(B_star);
     
     % Un-stack the matrix in a loop
     P2 = zeros(M, b, DOF);
