@@ -9,6 +9,9 @@ function make(functions)
         functions = 'all';
     end
     
+    % Make sure PSDM path is on path
+    addpath(path);
+    
     %% RUNID
     
     if any(strcmp(functions, 'deriveModel')) || any(strcmp(functions, 'all'))
