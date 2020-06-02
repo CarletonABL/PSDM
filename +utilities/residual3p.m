@@ -11,7 +11,8 @@ function r = residual3p(A,x,b)
     assert(size(x, 2) == size(b, 2), "x and b do not match in size");
 
     %% Try to run mex
-    if coder.target('matlab')
+    c = PSDM.config();
+    if coder.target('matlab') && c.use_mex
         try
             r = utilities.residual3p_mex(A, x, b);
             return;
