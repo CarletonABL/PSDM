@@ -95,8 +95,7 @@ function [Et, Pt, interim] = reduceModelComplexity(E, P, varargin)
     
     
     %% Parse arguments
-    
-    DOF = size(DH, 1);
+    DOF = size(E, 1)/5;
     m = size(E, 2);
     ell = size(P, 2);
     
@@ -114,7 +113,7 @@ function [Et, Pt, interim] = reduceModelComplexity(E, P, varargin)
     p.addOptional('interim', []); % If given, will skip the initial regression steps and use this instead.
     [robot, opt] = parseArgs(p, varargin{:});
     opt.tol = opt.tolerance;
-    opt.verbose = opt.v;
+    opt.v = opt.verbose;
     
     %% Function start
     
@@ -202,7 +201,7 @@ function [Et, Pt, interim] = reduceModelComplexity(E, P, varargin)
     
     if opt.check_accuracy
         % Estimate error of new model
-        checkModel(DH, X, g, E, P, Et, Pt, Ntests/5, opt);
+        checkModel(robot, E, P, Et, Pt, Ntests/5, opt);
     end
     
     if nargout > 2
@@ -221,29 +220,29 @@ function [Q, Qd, Qdd, tau] = ...
     % Generates sample points Q, Qd, Qdd and the corresponding torques for
     % random poses in qlim and near qd_lim, qdd_lim.
 
-    DOF = size(DH, 1);
+    DOF = robot.DOF;
     Ntests = round(Ntests);
     
     Q = RU.randomPose( qlim, Ntests );
     Qd = mean(qd_lim) + (rand(DOF, Ntests)-.5) * diff(qd_lim);
     Qdd = mean(qdd_lim) + (rand(DOF, Ntests)-.5) * diff(qdd_lim);
     
-    tau = robot.IDfunc(Q, Qd, Qdd, robot.X);
+    tau = robot.IDfunc(Q, Qd, Qdd, robot.X, 1);
         
 end
 
 
-function checkModel(DH, X, g, E, P, Et, Pt, Ntests, opt)
+function checkModel(robot, E, P, Et, Pt, Ntests, opt)
 
     Ntests = round(Ntests);
 
     % Generate validation set
     [Q, Qd, Qdd, tau] = ...
-        generateSamples(DH, X, g, Ntests, opt.qlim, opt.qd_lim, opt.qdd_lim);
+        generateSamples(robot, Ntests, opt.qlim, opt.qd_lim, opt.qdd_lim);
     
     % Find regressors
-    Theta = PSDM.X2Theta(DH, X, g, E, P, Ntests);
-    Thetat = PSDM.X2Theta(DH, X, g, Et, Pt, Ntests);
+    Theta = PSDM.X2Theta(E, P, robot.DH,  robot.g, robot.X, 'Ntests', Ntests);
+    Thetat = PSDM.X2Theta(Et, Pt, robot.DH, robot.g, robot.X,  'Ntests', Ntests);
     
     % Do inverse dynamics, check error
     tau_1 = PSDM.inverseDynamics(E, P, Theta, Q, Qd, Qdd);
