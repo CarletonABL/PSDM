@@ -92,7 +92,7 @@ end
 function Dcol = buildDColumn(Paccel_i, Theta, Yp_accel_i)
     % Builds up the ith column of the mass matrix D
 
-    Phi_accel_i = squeeze( utilities.blockprod( Paccel_i, Theta ) );
+    Phi_accel_i = permute( utilities.blockprod( Paccel_i, Theta ), [1 3 2] );
     % Get torques with Qdd_i = 1, resulting in D.
     Dcol = (Yp_accel_i * Phi_accel_i)';
 
