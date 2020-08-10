@@ -26,7 +26,7 @@ function res = iparfor( func, N, sz, specifySize )
         specifySize = true;
     end
     
-    assert( numel(N) == 1 && N >= 1, "N must be a scalar integer, greater than 1" );
+    assert( numel(N) == 1 && N >= 0, "N must be a scalar integer, greater than 1" );
         
     res = zeros( [sz N] );
     res_i = coder.nullcopy(zeros( sz ));

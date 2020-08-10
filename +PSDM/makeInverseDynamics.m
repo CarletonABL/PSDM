@@ -27,7 +27,8 @@ function makeInverseDynamics(filename, E, P, varargin)
     %   Modify the functioning of the program with these name/value pairs.
     %   - mex: If true, after generating the matlab code, the file will
     %       undergo code-generation using matlab's codegen to generate a
-    %       mex file. Default: false.
+    %       mex file. In this case, a header file will not be generated for
+    %       the function. Default: false.
     %   - help: If true and mex is set to true, the program will also
     %       generate a helpfile such that it is possible to call:
     %           help fast_forward_dynamics
@@ -78,10 +79,21 @@ function makeInverseDynamics(filename, E, P, varargin)
     
     funcText = PSDM.fgen.makeReplacements( funcText, vars, names, code );
     
-    %% Write file
+    % Write file
     fid = fopen(filename, 'wt');
     fprintf(fid, '%s', funcText);
     fclose(fid);
+    
+    %% Make header file, if desired
+    if ~opt.mex
+        headerTex = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s%s.h', mexName, allName)) );
+        headerTex = PSDM.fgen.makeReplacements( headerTex, vars, names, code );
+        
+        % Write file
+        fid = fopen( fullfile( funcDir, strcat(names.func, '.h') ), 'wt');
+        fprintf(fid, '%s', headerTex);
+        fclose(fid);
+    end
     
     %% Mex, if desired
     

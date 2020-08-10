@@ -25,7 +25,7 @@ function [tauCode, names, code] = makeTauCode( E, P, tauName, Yname, keepY, name
     
     %% Check if empty set was given
     if m == 0 || n == 0
-        tauCode = sprintf('\t\t%s = 0.0;\n', tauName);
+        tauCode = sprintf('\t\t%s = 0.0;\n', tauName{1});
         return;
     end
     

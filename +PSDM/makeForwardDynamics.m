@@ -74,11 +74,22 @@ function makeForwardDynamics(filename, E, P, varargin)
     
     funcText = PSDM.fgen.makeReplacements( funcText, vars, names, code );
         
-    
-    %% Write file
+    % Write file
     fid = fopen(filename, 'wt');
     fprintf(fid, '%s', funcText);
     fclose(fid);
+    
+    
+    %% Make header file, if desired
+    if ~opt.mex
+        headerTex = fileread( fullfile(dir, 'templates', sprintf('forwardDynamics%s%s.h', mexName, allName)) );
+        headerTex = PSDM.fgen.makeReplacements( headerTex, vars, names, code );
+        
+        % Write file
+        fid = fopen( fullfile( funcDir, strcat(names.func, '.h') ), 'wt');
+        fprintf(fid, '%s', headerTex);
+        fclose(fid);
+    end
     
     %% Mex, if desired
     

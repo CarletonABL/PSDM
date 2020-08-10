@@ -29,10 +29,11 @@ function Yp = generateYp(Q, Qd, Qdd, E)
     c = PSDM.config;
     if coder.target('matlab') && size(Q, 2) < 40000 && c.use_mex
          try
-            Yp = PSDM.generateYp_mex(Q, Qd, Qdd, E);
+            Yp = PSDM.generateYp_mex(Q, Qd, Qdd, uint8(E));
             return; 
-         catch
+         catch e
              warning("PSDM is not compiled! PSDM.generateYp will run slowly without compilation. Recommend running PSDM.make");
+             disp( e )
          end
     end
     

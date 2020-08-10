@@ -24,8 +24,11 @@ function [robot, opt] = parseArgs(p, varargin)
         % Extract gravity with defaults
         if numel(varargin) >= 2 && isnumeric(varargin{2}) && ~isempty(varargin{2})
             g = varargin{2};
-            assert(abs(sum(g.^2) - 1) < 1e-2, ...
-                "Gravity vector is not a unit vector.")
+            
+            if abs(sum(g.^2) - 1) > 1e-2 && coder.target('matlab')
+                warning("Warning! Gravity vector is not a unit vector. Did you enter it correctly?");
+            end
+            
             Nargs = 2;
         else
             g = [0; 0; 1];

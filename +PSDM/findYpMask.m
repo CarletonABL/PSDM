@@ -85,6 +85,12 @@ function C = doRegression(A, B, tol)
         mask = ones(m, 1, 'logical');
         for i = 1:2
             N = sum(mask);
+            
+            % If mask is empty, just break now
+            if ~any(mask)
+                break;
+            end
+            
             C = utilities.linsolve(A(1:N, mask), B(1:N, :));
 
             % Find tolerance
@@ -105,7 +111,10 @@ function C = doRegression(A, B, tol)
         
         C = zeros(m, DOF);
         
-        C(mask, :) = utilities.linsolve(A(1:N, mask), B(1:N, :));
+        % Do regression (only if mask has elements to regress)
+        if any(mask)
+            C(mask, :) = utilities.linsolve(A(1:N, mask), B(1:N, :));
+        end
         
         return;
         

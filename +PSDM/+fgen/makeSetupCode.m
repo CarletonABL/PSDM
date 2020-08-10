@@ -44,10 +44,13 @@ function [vars, names, code] = makeSetupCode(E, P, opt)
     % Generate gamma and gamma squared terms
     names.gamma{1} = repelem({''}, n);
     names.gamma{2} = repelem({''}, n);
+    
+    % Assign unsquared values
     for i = 1:nnz(colMask)
         names.gamma{1}{ ind1(i) } = sprintf('gi[%d]', ind1(i)-1);
     end
     
+    code.gamma{2} = cell(nnz(squareMask), 1);
     for i = 1:nnz(squareMask)
         names.gamma{2}{ ind2(i) } = sprintf('gi2_p%d', i);
         code.gamma{2}{ i } = sprintf('gi[%d]*gi[%d]', ind2(i)-1, ind2(i)-1);
