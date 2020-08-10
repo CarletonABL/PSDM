@@ -14,6 +14,9 @@
  */
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+/*EXTRA_INCLUDES*/
 
 void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const double *Theta, int N, double *Qdd)
 {
@@ -64,7 +67,8 @@ void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const 
 				}
 				if (i == j){
 					if (sum <= 0.0){
-						mexErrMsgTxt("Cholesky decomposition failed.");
+						__ERROR_FUNCTION__("Cholesky decomposition failed.");
+						return;
 					}
 					d[ dInd[i] ] = sqrt(sum);
 				}else{

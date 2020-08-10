@@ -1,4 +1,4 @@
-function text = makeReplacements(text, vars, names, code)
+function text = makeReplacements(text, vars, names, code, opt)
     % MAKEREPLACEMENTS Makes the appropriate substitutions in the real-time
     % code.
 
@@ -17,6 +17,17 @@ function text = makeReplacements(text, vars, names, code)
     text = strrep(text, '_ell_', mat2str(size(vars.P, 2)));
     text = strrep(text, '_Dsize_', mat2str(vars.DOF*(vars.DOF+1)/2));
     text = strrep(text, '_DOF2_', mat2str(vars.DOF^2));
+    
+    % Replace functions
+    if opt.mex
+        text = strrep(text, '__ERROR_FUNCTION__', 'mexErrMsgTxt');
+        text = strrep(text, '_MEXFUNCTIONNAME_', names.mexFunc);
+        text = strrep(text, '/*EXTRA_INCLUDES*/', '#include "mex.h"');
+        
+    else
+        text = strrep(text, '__ERROR_FUNCTION__', 'printf');
+        text = strrep(text, '/*EXTRA_INCLUDES*/', '');
+    end
     
    
 end

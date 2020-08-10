@@ -68,46 +68,65 @@ function makeInverseDynamics(filename, E, P, varargin)
         
     %% Make function
     
-    [funcDir, names.func, ~] = fileparts(filename);
+    [funcDir, names.func, ext] = fileparts(filename);
+    
+    % If mex, use the function name for the mex, and append _lib for the
+    % library.
+    if opt.mex
+        names.mexFunc = names.func;
+        names.func = strcat(names.mexFunc, '_lib');
+    end
+    
+    % Get current dir
     dir = fileparts(mfilename('fullpath'));
     
-    mexName = '';
-    if opt.mex; mexName = '_mex'; end
+    % Find appropriate template
     allName = '';
     if opt.return_Y; allName = '_all'; end
-    funcText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s%s.c', mexName, allName)) );
+    funcText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s.c', allName)) );
     
-    funcText = PSDM.fgen.makeReplacements( funcText, vars, names, code );
+    % Make replacements
+    funcText = PSDM.fgen.makeReplacements( funcText, vars, names, code, opt );
     
     % Write file
-    fid = fopen(filename, 'wt');
+    functionPath = fullfile(funcDir, strcat(names.func, '.c'));
+    fid = fopen(functionPath, 'wt');
     fprintf(fid, '%s', funcText);
     fclose(fid);
     
-    %% Make header file, if desired
-    if ~opt.mex
-        headerTex = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s%s.h', mexName, allName)) );
-        headerTex = PSDM.fgen.makeReplacements( headerTex, vars, names, code );
-        
-        % Write file
-        fid = fopen( fullfile( funcDir, strcat(names.func, '.h') ), 'wt');
-        fprintf(fid, '%s', headerTex);
-        fclose(fid);
-    end
+    %% Make header file
+    headerText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s.h', allName)) );
+    headerText = PSDM.fgen.makeReplacements( headerText, vars, names, code, opt );
+
+    % Write file
+    headerPath = fullfile( funcDir, strcat(names.func, '.h') );
+    fid = fopen( headerPath , 'wt');
+    fprintf(fid, '%s', headerText);
+    fclose(fid);
     
     %% Mex, if desired
     
     if opt.mex
         
+        % Make mex adapter function
+        mexText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s_mex.c', allName)) ); 
+        mexText = PSDM.fgen.makeReplacements( mexText, vars, names, code, opt );
+        
+        % Write file
+        fid = fopen(fullfile( funcDir, strcat(names.mexFunc, '.c') ), 'wt');
+        fprintf(fid, '%s', mexText);
+        fclose(fid);
+        
+        % Compile
         fprintf("Compiling into mex file...\n");
-        mex(filename, '-R2018a', '-outdir', funcDir)
+        mex(filename, '-R2018a', '-outdir', funcDir, functionPath)
         fprintf("Done!\n");
         
         % Make help file
         if opt.help
             helpText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics_help%s.m', allName)) );
-            helpText = PSDM.fgen.makeReplacements( helpText, vars, names, code );
-            help_filename = fullfile( funcDir, strcat(names.func, '.m') );
+            helpText = PSDM.fgen.makeReplacements( helpText, vars, names, code, opt );
+            help_filename = fullfile( funcDir, strcat(names.mexFunc, '.m') );
             fid = fopen(help_filename, 'wt');
             fprintf(fid, '%s', helpText);
             fclose(fid);

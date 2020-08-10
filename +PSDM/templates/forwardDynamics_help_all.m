@@ -1,9 +1,9 @@
-% _FUNCTIONNAME_ Computes the forward dynamics for a model, as per the E 
+% _MEXFUNCTIONNAME_ Computes the forward dynamics for a model, as per the E 
 % and P matrices which were used to generate it.
 %
 % Calling syntax is:
-%   [Qdd] = _FUNCTIONNAME_(Q, Qd, tau, Theta)
-%   [Qdd, tau_induced, D] = _FUNCTIONNAME_(Q, Qd, tau, Theta)
+%   [Qdd] = _MEXFUNCTIONNAME_(Q, Qd, tau, Theta)
+%   [Qdd, tau_induced, D] = _MEXFUNCTIONNAME_(Q, Qd, tau, Theta)
 % where
 %   - Q, Qd, Qdd are the joint variables and their first and second
 %     derivatives, respectively, in a _1DOF_xN matrix.
