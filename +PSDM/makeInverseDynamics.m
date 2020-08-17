@@ -109,7 +109,7 @@ function makeInverseDynamics(filename, E, P, varargin)
     if opt.mex
         
         % Make mex adapter function
-        mexText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics%s_mex.c', allName)) ); 
+        mexText = fileread( fullfile(dir, 'templates', sprintf('inverseDynamics_mex%s.c', allName)) ); 
         mexText = PSDM.fgen.makeReplacements( mexText, vars, names, code, opt );
         
         % Write file

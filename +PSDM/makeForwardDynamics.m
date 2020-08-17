@@ -104,7 +104,7 @@ function makeForwardDynamics(filename, E, P, varargin)
     if opt.mex
         
         % Make mex adapter function
-        mexText = fileread( fullfile(dir, 'templates', sprintf('forwardDynamics%s_mex.c', allName)) ); 
+        mexText = fileread( fullfile(dir, 'templates', sprintf('forwardDynamics_mex%s.c', allName)) ); 
         mexText = PSDM.fgen.makeReplacements( mexText, vars, names, code, opt );
         
         % Write file
