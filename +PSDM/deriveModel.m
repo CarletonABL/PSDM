@@ -49,6 +49,8 @@ function [E, P] = deriveModel(varargin)
     %        To successfully derive the PSDM model, this does not need to
     %        be correct. It is only used to determine which elements of the
     %        model are identically zero, and can be ignored.
+    %        Optionally, an 11th column may be added to represent the joint
+    %        drive inertias/masses (units of kg or kgm^2).
     %        Default: ones(DOF, 10)
     %
     %   - inverseDynamicsFunc: An anonymous function which can be called

@@ -44,6 +44,8 @@ function [wrench, extra] = ...
     %           If you include a DOF+1 row to this, it will assume that
     %           this is the tool effect and combine it into the
     %           equations.
+    %           Optionally, an 11th column may be added to represent the joint
+    %           drive inertias/masses (units of kg or kgm^2).
     %   - Q, Qd, Qdd [DOF x 1]: Joint variables of the motion (radians for
     %           angles!).
     %   - outputFrame [int8]: The ID of the frame you want to output the
@@ -101,7 +103,7 @@ function [wrench, extra] = ...
     end
     
     % Parse Xlist
-    assert( (size(Xlist, 1) == DOF || size(Xlist, 1) == DOF+1) && size(Xlist, 2) == 10, ...
+    assert( (size(Xlist, 1) == DOF || size(Xlist, 1) == DOF+1) && size(Xlist, 2) >= 10 && size(Xlist, 2) <= 11, ...
         "Xlist is the wrong size!");
     
     if size(Xlist, 1) == DOF+1
@@ -115,6 +117,13 @@ function [wrench, extra] = ...
     m = Xrobot(:, 1)';
     rc = Xrobot(:, 2:4)';
     I = inertiaTensor(Xrobot(:, 5:10));
+    
+    if size(Xrobot, 2) >= 11
+        % 11th column is a list of joint drive inertias
+        Im = Xrobot(:, 11);
+    else
+        Im = zeros(DOF, 1);
+    end
 
     % If Xtool is non-zero, then combine its inertia with that of the last
     % link, then proceed normally.
@@ -165,6 +174,7 @@ function [wrench, extra] = ...
     props.DH = DH;
     props.rc = rc;
     props.m = m;
+    props.Im = Im;
     props.g = -g * utilities.g;
     props.I = I;
     props.lt = lt; % logical zero if revolute, logical 1 if prismatic
@@ -384,7 +394,15 @@ function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
     extra.w = w(:, 2:end);
     extra.ae = ae(:, 2:end);
     extra.ac = ac(:, 2:end);
-
+    
+    % Add in the drive inertia effect, if applicable
+    if any( abs(props.Im) > eps )                        
+        for i = 1:DOF
+            wrench1(4:6, i) = wrench1(4:6, i) + ...
+                                Rdiff(:, :, i)' * [0; 0; props.Im(i) .* Qdd(i)];
+        end
+    end
+    
     % Initialize a wrenchT vector, the wrench in the transformed frame.
     wrench = zeros(6, DOF);
 
@@ -399,7 +417,7 @@ function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
             
         case {int8(0), int8(2)}
             % Need to rewrite it backwards one frame
-            Radj = Rdiff;
+            Radj = Rdiff(:, :, 1:DOF);
 
         case int8(-1)
             % Base frame (note, not tested! Should be
@@ -407,10 +425,10 @@ function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
             Radj = R(:, :, 2:end);
 
         otherwise
-            error("Invalid outputFrame! Must be -1, 0 or 1");
+            error("Invalid outputFrame! Must be -1, 0, 1, 2");
 
     end
-
+    
     % If we get here, need to adjust the frame.
     for i = 1:DOF
         % For all quantities, multiply by the appropriate rotation matrix.

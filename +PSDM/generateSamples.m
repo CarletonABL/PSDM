@@ -207,7 +207,7 @@ function Xlist = getRobotInertiaProps(X, Nt)
     else
         
         % Make Nt random properties
-        Xlist = rand(DOF, 10, Nt);
+        Xlist = rand(size(X, 1), size(X, 2), Nt);
         
         % Some can be negative
         Xlist(:, [2 3 4 8 9 10], :) = Xlist(:, [2 3 4 8 9 10], :) * 2 - 1;

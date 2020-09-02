@@ -81,14 +81,14 @@ function make(functions)
         % Define argument types for entry-point 'inverseDynamicsNewton'.
         ARGS = cell(1,1);
         ARGS{1} = cell(8,1);
-        ARGS{1}{1} = coder.typeof(0,[10  6],[1 1]);
-        ARGS{1}{2} = coder.typeof(0,[10 10],[1 0]);
-        ARGS{1}{3} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]);
-        ARGS{1}{6} = coder.typeof(int8(0));
-        ARGS{1}{7} = coder.typeof(0,[3 1]);
-        ARGS{1}{8} = coder.typeof(0,[3 3]);
+        ARGS{1}{1} = coder.typeof(0,[10  6],[1 1]); % DH_ext
+        ARGS{1}{2} = coder.typeof(0,[10 11],[1 1]); % Xlist
+        ARGS{1}{3} = coder.typeof(0,[10 Inf],[1 1]); % Q
+        ARGS{1}{4} = coder.typeof(0,[10 Inf],[1 1]); % Qd
+        ARGS{1}{5} = coder.typeof(0,[10 Inf],[1 1]); % Qdd
+        ARGS{1}{6} = coder.typeof(int8(0)); % outputframe
+        ARGS{1}{7} = coder.typeof(0,[3 1]); % g
+        ARGS{1}{8} = coder.typeof(0,[3 3]); % Rbase
 
         % Invoke MATLAB Coder.
         cd( fullfile( path, '+PSDM') );

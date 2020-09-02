@@ -84,4 +84,11 @@ function Theta = X2Theta(E, P, varargin)
     tau_stack = utilities.vertStack(tau, 2);
     Theta = utilities.linsolve(Yb_stack, tau_stack);
     
+    % Double check that this theta performs well
+    tau_stack_reproj = Yb_stack*Theta;
+    err = utils.maxerr(tau_stack_reproj, tau_stack);
+    if err > 1e-5
+        warning(sprintf("The identified Theta appears to not be accurate (reproj error = %.4g).\nUse with care.", err));
+    end
+    
 end
