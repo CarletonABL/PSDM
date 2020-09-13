@@ -47,7 +47,7 @@ function mask = findYpMask(robot, Em, typeID, opt)
         % Check reprojection
         r = Y(:, mask) * theta(mask, :) - tau;
 
-        if any(abs(r) > 1e-3, 'all')
+        if any(any(abs(r) > 1e-3, 1), 2)
             if coder.target('matlab')
                 warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
                 keyboard;
@@ -84,10 +84,10 @@ function C = doRegression(A, B, tol)
         
         mask = ones(m, 1, 'logical');
         for i = 1:2
-            N = sum(mask);
+            N = nnz(mask);
             
             % If mask is empty, just break now
-            if ~any(mask)
+            if ~any(mask, 1)
                 break;
             end
             
@@ -112,7 +112,7 @@ function C = doRegression(A, B, tol)
         C = zeros(m, DOF);
         
         % Do regression (only if mask has elements to regress)
-        if any(mask)
+        if any(mask, 1)
             C(mask, :) = utilities.linsolve(A(1:N, mask), B(1:N, :));
         end
         

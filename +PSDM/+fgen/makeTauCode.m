@@ -57,7 +57,7 @@ function [tauCode, names, code] = makeTauCode( E, P, tauName, Yname, keepY, name
             colMask = any(E(:, rowMask) > 0, 2);
             
             % Assign value to skip
-            if ~any(rowMask)
+            if ~any(rowMask, 1)
                 wasSkipped(c1) = true;
                 yCode{c1} = sprintf('%s[startIndY + %d] = 0.0;', Yname, (k-1)*DOF+j-1);
                 continue;

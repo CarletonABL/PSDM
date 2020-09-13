@@ -117,7 +117,7 @@ function P = findReductionMatrix(robot, Ep, idType_in, P1_in, opt)
         % Find reprojection error
         r = Ymin_stack*Tmin - tau_stack;
 
-        if any(abs(r) > 1e-3, 'all')
+        if any(any(abs(r) > 1e-3, 1), 2)
             if coder.target('matlab')
                 warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
                 keyboard;

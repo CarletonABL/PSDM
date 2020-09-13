@@ -26,10 +26,10 @@ function x = linsolve_base(A, b, niter, useSymbolic, exitTolerance)
         x = x - d;
         
         % Break?
-        norm_d = utilities.norm2(d);
-        if all(norm_d < tol2) || ...
-           all(norm_d > norm_d_prev) || ...
-           all(abs(norm_d - norm_d_prev) < exitTolerance)
+        norm_d = utilities.norm2(d, 1);
+        if all(norm_d < tol2, 2) || ...
+           all(norm_d > norm_d_prev, 2) || ...
+           all(abs(norm_d - norm_d_prev) < exitTolerance, 2)
             break;
         end
         

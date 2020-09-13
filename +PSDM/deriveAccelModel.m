@@ -46,7 +46,7 @@ function [E, Pi] = deriveAccelModel(robot, opt)
         maskCorr = PSDM.findYpMask(robot, Em_joint, {'accel', j}, opt);
         
         % Combine with running mask
-        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );    
+        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ), 1 );    
         
         % Build up E matrix for each joint
         E{j} = Em_joint(:, maskCorr);

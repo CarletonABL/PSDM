@@ -127,7 +127,7 @@ function [wrench, extra] = ...
 
     % If Xtool is non-zero, then combine its inertia with that of the last
     % link, then proceed normally.
-    if any(abs(Xtool) > eps)
+    if any(abs(Xtool) > eps, 2)
         Xend = PSDM.combineBodyInertias(Xrobot(DOF, :), Xtool);
         m(end) = Xend(1);
         rc(:, end) = Xend(1, 2:4)';
@@ -135,7 +135,7 @@ function [wrench, extra] = ...
     end
 
     % Check Q vectors
-    assert( all(size(Q) == size(Qd)) && all(size(Q) == size(Qdd)), ...
+    assert( all(size(Q) == size(Qd), 2) && all(size(Q) == size(Qdd), 2), ...
         "Joint variables sizes must match!");
     assert( size(Q, 1) == DOF, "Joint variables must be a DOF x N matrix!");
 
@@ -396,7 +396,7 @@ function [wrench, extra] = mainNELoop(props, Q, Qd, Qdd, outputFrame)
     extra.ac = ac(:, 2:end);
     
     % Add in the drive inertia effect, if applicable
-    if any( abs(props.Im) > eps )                        
+    if any( abs(props.Im) > eps, 1 )                        
         for i = 1:DOF
             wrench1(4:6, i) = wrench1(4:6, i) + ...
                                 Rdiff(:, :, i)' * [0; 0; props.Im(i) .* Qdd(i)];

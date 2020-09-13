@@ -51,7 +51,7 @@ function [setCode, names, code] = genCode(S, name, name_prefix, names_t, names, 
     
     % Is this the final iteration? If so, name of returned variable
     % changes.
-    if n == 1 || all( Su2 == 0, 'all')
+    if n == 1 || all(all( Su2 == 0, 1), 2)
         name_i = name;
         final = true;
     else

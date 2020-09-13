@@ -69,7 +69,7 @@ function [E, Pi] = deriveVelocityModel(robot, Ep_accel, opt)
         maskCorr = PSDM.findYpMask(robot, Ep_cent_i, {'centripital', j}, opt);
         
         % Combine masks.
-        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );   
+        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ), 1 );   
         
         % Store results, and find reduction matrix
         E{j} = Ep_cent_i(:, maskCorr);
@@ -105,7 +105,7 @@ function [E, Pi] = deriveVelocityModel(robot, Ep_accel, opt)
         maskCorr = PSDM.findYpMask(robot, Ep_cor_ij, {'coriolis', ij}, opt);
         
         % Combine masks
-        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ) );    
+        mask(maskCombined) = all( vertcat( mask(maskCombined), maskCorr ), 1 );    
         
         % Store results, find reduction matrix
         E{DOF+i} = Ep_cor_ij(:, maskCorr);
