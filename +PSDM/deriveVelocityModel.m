@@ -13,6 +13,7 @@ function [E, Pi] = deriveVelocityModel(robot, Ep_accel, opt)
     DOF = robot.DOF;
     
     % Start timer
+    coder.extrinsic('tic', 'toc')
     time = tic;
     
     % Get candidate functions from accel terms

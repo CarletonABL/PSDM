@@ -10,6 +10,7 @@ function [E, Pi] = deriveAccelModel(robot, opt)
     % See also PSDM.deriveModel
 
     %% Function Start
+    coder.extrinsic('tic', 'toc')
     t = tic;
     DOF = robot.DOF;
     

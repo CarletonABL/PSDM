@@ -6,6 +6,7 @@ function mask = findYpMask(robot, Em, typeID, opt)
     %
     % mask is 1 x M mask of which terms of E are correlated to tau.
 
+    coder.extrinsic('tic', 'toc')
     time = tic;
     
     % Number of terms
@@ -47,7 +48,7 @@ function mask = findYpMask(robot, Em, typeID, opt)
         % Check reprojection
         r = Y(:, mask) * theta(mask, :) - tau;
 
-        if any(any(abs(r) > 1e-3, 1), 2)
+        if any(abs(r(:)) > 1e-3, 1)
             if coder.target('matlab')
                 warning("Reprojection test failed, max reprojection error is %.3g. Continue?", max(abs(r), [], 'all'));
                 keyboard;
@@ -57,7 +58,7 @@ function mask = findYpMask(robot, Em, typeID, opt)
         end
         
         % Output information, if required.
-        utilities.vprint(opt.v, "\t\tMax Reprojection Error: %.3g.\n",  max(abs(r), [], 'all'));
+        utilities.vprint(opt.v, "\t\tMax Reprojection Error: %.3g.\n",  max(abs(r(:))) );
     
     end
     

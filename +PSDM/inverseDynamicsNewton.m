@@ -191,14 +191,9 @@ function [wrench, extra] = ...
     
     % Run loop in parallel if possible.
     % Use parallel if in matlab and parallel pool open, or if using matlab
-    % coder
-    if coder.target('matlab')
-        doPar = ~isempty(gcp('nocreate'));
-    else
-        doPar = true;
-    end
-    
-    if doPar
+    % coder    
+    if utilities.autoPar
+
      
         % Parfor loop
         parfor j = 1:N

@@ -127,6 +127,7 @@ function [E, P] = deriveModel(varargin)
     %% Start function
             
     % Start timeing
+    coder.extrinsic('tic', 'toc')
     t = tic;
     
     % Derive gravity model

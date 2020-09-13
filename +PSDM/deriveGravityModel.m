@@ -10,6 +10,7 @@ function [E, Pi] = deriveGravityModel(robot, opt)
     % See also PSDM.deriveModel
     
     % Start timer
+    coder.extrinsic('tic', 'toc')
     time = tic;
     
     % Get candidate Y functions for gravity (as exponent matrix).
