@@ -100,13 +100,21 @@ PSDM is a numerical method of deriving the equations of motion of an arbitrary r
 
 To use PSDM, you need to first derive a PSDM model. This will return an \textit{exponent matrix} $\mathbf{E}$ and a \textit{reduction page matrix} $\mathbf{P}$. These matrices contain the full information to compute the forward and inverse dynamic model, as
 \begin{align}\label{eq:ID}
-	\tau_i = \mathbf{y}_p(\q, \qd, \qdd) \, \bP_i \, \mathbf{\Theta}_b,
+	\tau_i = \mathbf{y}_p(\q, \qd, \qdd) \, \bP_i \, \mathbf{\theta}_b,
 \end{align}
 and $\b{y}_p(\q, \qd, \qdd)$ can be calculated from $\bE$ as
 \begin{align}
 		y_j(\q, \qd, \qdd) = \prod_{i=1}^{5n} \Big[\gamma_i(\q, \qd, \qdd)\Big]^{e_{i,j}}, \quad e_{i,j} \in \big\{0, 1, 2\big\},\\
 		\b{\gamma}(\q, \qd, \qdd) = \begin{bmatrix}\q^\transpose & \sin(\q)^\transpose & \cos(\q)^\transpose & \qd^\transpose & \qdd ^\transpose \end{bmatrix}^\transpose,
 \end{align}
+
+\section{Requirements}
+This codebase requires a Matlab environment of R2018a, or newer. Additionally:
+\begin{enumerate}
+\item The Matlab \textit{Symbolic Toolbox} is used in some of the example live scripts to illustrate some of the derivation results. This toolbox must be installed to run these code snippets.
+\item \textit{Matlab Coder} is required to leverage the code-generation capabilities built into this toolbox (see Section 3).
+\item The derivation process can also leverage parallel processing, if the Matlab \textit{Parallel Computing Toolbox} is installed. See Section 3 for details on this. 
+\end{enumerate}
 
 \section{Derivation}
 
@@ -154,9 +162,9 @@ is assumed, i.e. that the $z$-axis points directly upwards against gravity.
 A third parameter $\mathbf{X}$ can also be supplied, which represents the inertial parameters of the robot, in the following form:
 \begin{align}
 	\b{X} = \begin{bmatrix}
-		m_1 & r_{x,1} & r_{y,1} & r_{z,1} & I_{xx,1} & I_{yy,1} & I_{zz,1} & I_{xy,1} & I_{xz,1} & I_{yz,1}\\
-		\vdots &\vdots &\vdots &\vdots &\vdots &\vdots&\vdots&\vdots&\vdots&\vdots\\
-		m_n & r_{x,n} & r_{y,n} & r_{z,n} & I_{xx,n} & I_{yy,n} & I_{zz,n} & I_{xy,n} & I_{xz,n} & I_{yz,n}\\
+		m_1 & r_{x,1} & r_{y,1} & r_{z,1} & I_{xx,1} & I_{yy,1} & I_{zz,1} & I_{xy,1} & I_{xz,1} & I_{yz,1} & I_{m,1}\\
+		\vdots &\vdots &\vdots &\vdots &\vdots &\vdots&\vdots&\vdots&\vdots&\vdots&\vdots\\
+		m_n & r_{x,n} & r_{y,n} & r_{z,n} & I_{xx,n} & I_{yy,n} & I_{zz,n} & I_{xy,n} & I_{xz,n} & I_{yz,n} & I_{m,n}\\
 	\end{bmatrix}
 \end{align}
 where
@@ -164,6 +172,7 @@ where
 	\item $m_i$ is the mass of link $i$;
 	\item $r_{x,i}$, $r_{y,i}$, $r_{z,i}$ are the (x,y,z) position of the center of gravity of the link;
 	\item $I_{xx,i}$, $I_{yy,i}$, $I_{zz,i}$, $I_{xy,i}$, $I_{xz,i}$, $I_{yz,i}$ are the principle and cross inertia terms of the link, centered at the center of gravity and aligned with the main coordinate system of the link.
+	\item $I_{m,i}$ are the equivalent moment of inertias of the motor armatures and drives. Note, this column may be omitted, if desired, in which case the algorithm will assume the effect of these variables is negligible.
 \end{itemize}
 Note, if supplied, the numerical values of this variable are not actually used. However, any parameter which is given as \textit{identically} zero will be implicitely numerically ignored by the algorithm, resulting in a simpler equation. If omitted, the algorithm will simply assume all parameters are nonzero.
 
@@ -210,7 +219,7 @@ The functions \texttt{PSDM.inverseDynamics} and \texttt{PSDM.forwardDynamics} wo
 PSDM.makeInverseDynamics(filename, E, P, Theta)
 PSDM.makeForwardDynamics(filename, E, P, Theta)
 \end{lstlisting}\vspace{1em}
-This will generate a c function defined as per the name given in the \texttt{filename} variable, with many optimizations done. This code can also be compiled into a MEX file to be used in matlab. These generated functiosn are very fast.
+This will generate a c function defined as per the name given in the \texttt{filename} variable, with many optimizations done. This code can also be compiled into a MEX file to be used in Matlab. These generated functions are highly optimized and are very fast.
 
 \subsection{Complexity Reduction}
 This codebase also includes tools to reduce the complexity of the model without significantly reducing model quality. The usage of this is summarized in the help text of the function
@@ -222,14 +231,21 @@ This codebase also includes tools to reduce the complexity of the model without 
 
 \section{Making PSDM Code}
 
-Many of the functions in PSDM run fairly slow in interpreted Matlab code. These can be sped up by compiling them into MEX files, if the user has Matlab Coder installed.
-
-To do this, run the command:
+Many of the functions in PSDM run fairly slow in interpreted Matlab code. These can be sped up by compiling them into MEX files, if the user has Matlab Coder installed. To do this, run the command:
 \begin{lstlisting}
 PSDM.make();
 \end{lstlisting}
 
 This will compile many of the PSDM functions into mex files. Then, to tell the package to ``use'' the mex files, you need to modify the file \texttt{+PSDM/config.m} such that the \texttt{use\_mex} parameter is \texttt{true}.
+
+Additionally, if you have the Parallel Computing Toolbox installed, you can set the \texttt{use\_par} parameter to \texttt{true}, in order to enable the derivation scripts to use parallel processing to further speed up the code.
+
+\section{More Help}
+
+All the functions in this toolbox are written in a way to integrate with Matlab's \texttt{help} function. To get additional details on the calling syntax or options of any of the functions, you can simply type.
+\begin{lstlisting}
+help PSDM.functionName
+\end{lstlisting}
 
 \section{Examples}
 
