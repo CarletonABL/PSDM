@@ -26,6 +26,7 @@ void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const 
 	double gi[_5DOF_];
 	double tauInd[_1DOF_];
 	double d[_Dsize_];
+	bool PDflag;
 	/*NAME_DEF*/
 
 	/* Prep some variables for the matrix inversions */
@@ -59,7 +60,8 @@ void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const 
 		/* Invert matrix */
 
 		/* Do a destructive cholesky decomposition on D */
-		for (i = 0; i<_1DOF_; i++){
+		PDflag = true;
+		for (i = 0; i<_1DOF_ && PDflag; i++){
 			for (j = i; j<_1DOF_; j++){
 				sum = d[ i+iInd[j] ];
 				for (k = 0; k<i; k++){
@@ -67,8 +69,8 @@ void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const 
 				}
 				if (i == j){
 					if (sum <= 0.0){
-						__ERROR_FUNCTION__("Cholesky decomposition failed.");
-						return;
+						PDflag = false;
+						break;
 					}
 					d[ dInd[i] ] = sqrt(sum);
 				}else{
@@ -78,21 +80,29 @@ void _FUNCTIONNAME_(const double *Q, const double *Qd, const double *tau, const 
 		}
 
 		/* Now use this decomposition to solve system of linear equations */
-		for (i = 0; i<_1DOF_; i++){
-			sum = tau[startInd + i] - tauInd[i];
-			for (k = 0; k < i; k++){
-				sum -= d[ k + iInd[i] ] * Qdd[ startInd + k ];
-			}
-			Qdd[ startInd + i ] = sum/d[ dInd[i] ];
-		}
-		for (i=_1DOF_-1; i>=0; i--){
-			sum = Qdd[ startInd + i ];
-			for (k = i+1; k < _1DOF_; k++){
-				sum -= d[ i + iInd[k] ] * Qdd[ startInd + k ];
-			}
-			Qdd[ startInd + i ] = sum/d[ dInd[i] ];
-		}
+		if (PDflag){
 
+			for (i = 0; i<_1DOF_; i++){
+				sum = tau[startInd + i] - tauInd[i];
+				for (k = 0; k < i; k++){
+					sum -= d[ k + iInd[i] ] * Qdd[ startInd + k ];
+				}
+				Qdd[ startInd + i ] = sum/d[ dInd[i] ];
+			}
+			for (i=_1DOF_-1; i>=0; i--){
+				sum = Qdd[ startInd + i ];
+				for (k = i+1; k < _1DOF_; k++){
+					sum -= d[ i + iInd[k] ] * Qdd[ startInd + k ];
+				}
+				Qdd[ startInd + i ] = sum/d[ dInd[i] ];
+			}
+
+		}else{
+			for (i = 0; i<_1DOF_; i++){
+				Qdd[ startInd + i ] = 0.0/0.0;
+			}
+		}
+		
 	}
 }
 
