@@ -82,6 +82,18 @@
 
 \usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
 
+\definecolor{darkaqua}{RGB}{0,114,189}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=darkaqua,
+	urlcolor=darkaqua,
+	citecolor=darkaqua
+}
+
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1em}
+\renewcommand{\baselinestretch}{1.0}
+
 %opening
 \title{README -- PSDM Matlab Code Package}
 \author{Steffan Lloyd (steffan.lloyd@carleton.ca)}
@@ -92,11 +104,13 @@
 
 PSDM is a numerical method of deriving the equations of motion of an arbitrary rigid body chain, in regressor form. It is an alternative means of deriving the equations of motion for a rigid, serial kinematic chain. The result is a numerically represented model in a highly organized form, which allows for many symbolic manipulations through numerical methods. This allows for
 
-\begin{enumerate}[itemsep=0pt]
+\begin{enumerate}[itemsep=0pt,nosep]
  \item The generation of very fast real time code.
  \item Automatic model simplification (to achieve faster evaluation times)
  \item Both forward and inverse dynamic modelling in a single derivation and with the same inertial parameter set.
 \end{enumerate}
+
+For full details on the PSDM algorithm, please refer to \cite{Lloyd2021} (preprint is given in this repository).
 
 To use PSDM, you need to first derive a PSDM model. This will return an \textit{exponent matrix} $\mathbf{E}$ and a \textit{reduction page matrix} $\mathbf{P}$. These matrices contain the full information to compute the forward and inverse dynamic model, as
 \begin{align}\label{eq:ID}
@@ -110,7 +124,7 @@ and $\b{y}_p(\q, \qd, \qdd)$ can be calculated from $\bE$ as
 
 \section{Requirements}
 This codebase requires a Matlab environment of R2018a, or newer. Additionally:
-\begin{enumerate}
+\begin{enumerate}[nosep]
 \item The Matlab \textit{Symbolic Toolbox} is used in some of the example live scripts to illustrate some of the derivation results. This toolbox must be installed to run these code snippets.
 \item \textit{Matlab Coder} is required to leverage the code-generation capabilities built into this toolbox (see Section 3).
 \item The derivation process can also leverage parallel processing, if the Matlab \textit{Parallel Computing Toolbox} is installed. See Section 3 for details on this. 
@@ -139,7 +153,7 @@ If the DH / g syntax is used, the DH table should be given as a $n\times 6$ matr
 	\end{bmatrix}
 \end{align}
 where the DH variables are as defined by \cite{spong2008}:
-\begin{enumerate}[itemsep=0pt]
+\begin{enumerate}[nosep]
 	\item $a_i$ is the distance along the x axis from frame $o_{i-1}$ to $o_i$;
 	\item $\alpha_i$ is the angular rotation about $x_i$ from $o_{i-1}$ to $o_i$;
 	\item $d_i$ is the linear displacement along the $z$-axis from $o_{i-1}$ to $o_i$;
@@ -168,7 +182,7 @@ A third parameter $\mathbf{X}$ can also be supplied, which represents the inerti
 	\end{bmatrix}
 \end{align}
 where
-\begin{itemize}[itemsep=0pt]
+\begin{itemize}[nosep]
 	\item $m_i$ is the mass of link $i$;
 	\item $r_{x,i}$, $r_{y,i}$, $r_{z,i}$ are the (x,y,z) position of the center of gravity of the link;
 	\item $I_{xx,i}$, $I_{yy,i}$, $I_{zz,i}$, $I_{xy,i}$, $I_{xz,i}$, $I_{yz,i}$ are the principle and cross inertia terms of the link, centered at the center of gravity and aligned with the main coordinate system of the link.
@@ -181,13 +195,13 @@ Note, if supplied, the numerical values of this variable are not actually used. 
 If you do not have a DH table of the robot, but instead have access to some dynamic simulation of your manipulator, you can still use PSDM if you can define an anonymous function `@inverseDynamicsFunc` which allows the algorithm to sample the joint torques for any joint states and inertial parameters, as
 \begin{lstlisting}
 tau = inverseDynamicsFunc(Q, Qd, Qdd, X, g_scale)
-\end{lstlisting}\vspace{1em}
+\end{lstlisting}
 where \texttt{tau}, \texttt{Q}, \texttt{Qd}, \texttt{Qdd} are $n \times N$ matrices ($n$ degrees of freedom, $N$ samples), and $\mathbf{X}$ is an inertia parameter matrix as defined above. Finally, the parameter \texttt{g\_scale} should be accepted as a scalar which scales gravity. For example, if given \texttt{g\_scale = 0}, the model should run as if there were no gravity, and if \texttt{g\_scale = 1}, then the model should run normally (with gravity).
 
 \subsection{Additional Options}
 
 Additionally, the following name/value pairs can be supplied:
-\begin{itemize}[itemsep=0pt]
+\begin{itemize}[nosep]
 	\item \texttt{tolerance}: A tolerance used in the ID. Any factors below this tolerance (in estimation of the torques) is ignored. Defaut: \texttt{1e-10}.
 	\item \texttt{verbose}: A verbosity flag. Set to false to suppress output. Default: \texttt{true}.
 	\item \texttt{gravity\_only}: If true, the algorithm will ignore all acceleration  and velocity effects. Default: \texttt{false}.
@@ -250,20 +264,28 @@ help PSDM.functionName
 \section{Examples}
 
 Several examples are given for common manipulators, including
-\begin{enumerate}[itemsep=0pt]
+\begin{enumerate}[nosep]
 	\item Two-link planar manipulator;
 	\item SCARA robot;
 	\item KUKA KR6 spherical wrist 6-DOF manipulator.
-\end{enumerate}\vspace{1em}
+\end{enumerate}
 Photos and numbers are given in the appropriately named scripts in the \texttt{examples} folder.
 
 \section{Crediting and Contact}
 
-This software is developped by Steffan Lloyd (email steffan.lloyd@carleton.ca). The code is offered ``as is'' and can be used at the risk of the user.
+This software is developed by Steffan Lloyd (email steffan.lloyd@carleton.ca). The code is offered ``as is'' and can be used at the risk of the user.
 
-If you use our work in a project, we ask that you credit us appropriately (through a citation or otherwise). Citation information will be posted once our manuscript on the subject is published.
+If you use our work in a project, we ask that you credit us appropriately (through a citation or otherwise). The work should be cited as \cite{Lloyd2021}
 
-\bibliographystyle{sageh}
-\bibliography{library.bib}
+\texttt{[1] S. Lloyd, R. Irani, and M. Ahmadi, ``A numeric derivation for fast regressive modeling of manipulator dynamics,'' Mech. Mach. Theory, vol. 156, p. 104149, Feb. 2021.}
+
+This work can be accessed via its doi at \href{https://doi.org/10.1016/j.mechmachtheory.2020.104149}{\texttt{10.1016/j.mechmachtheory.2020.104149}}. A preprint version of this work is included in this repository, see \texttt{SLloydEtAl2021\_PSDM.pdf}.
+
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{2}
+	\bibitem{spong2008} M. W. Spong and M. Vidyasagar, Robot dynamics and control. John Wiley and Sons, 2008.
+	\bibitem{Lloyd2021} S. Lloyd, R. Irani, and M. Ahmadi, ``A numeric derivation for fast regressive modeling of manipulator dynamics,'' Mech. Mach. Theory, vol. 156, p. 104149, Feb. 2021.
+\end{thebibliography}
 
 \end{document}
