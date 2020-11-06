@@ -18,7 +18,11 @@ This codebase requires a Matlab environment of R2018a, or newer. Additionally:
  - The derivation process can also leverage parallel processing, if the Matlab *Parallel Computing Toolbox* is installed. See Section 3 of the PDF README for details on this. 
 
 ## Credit
-If you use our work, we ask that you cite us appropriately in any work. This work is in the process of being published and citation information will be posted when it becomes available.
+If you use our work, we ask that you cite us appropriately in any work.
+
+[1] S. Lloyd, R. Irani, and M. Ahmadi, “A numeric derivation for fast regressive modeling of manipulator dynamics,” Mech. Mach. Theory, vol. 156, p. 104149, Feb. 2021.
+
+A preprint version of this work is included in this repository, see [SLloydEtAl2021_PSDM.pdf](SLloydEtAl2021_PSDM.pdf)
 
 ## Contact
 Author: Steffan Lloyd (Steffan.Lloyd@carleton.ca).
