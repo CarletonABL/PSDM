@@ -24,5 +24,8 @@ If you use our work, we ask that you cite us appropriately in any work.
 
 This work can be accessed via its doi at [10.1016/j.mechmachtheory.2020.104149](https://doi.org/10.1016/j.mechmachtheory.2020.104149). A preprint version of this work is included in this repository, see [SLloydEtAl2021_PSDM.pdf](SLloydEtAl2021_PSDM.pdf)
 
+## MECC 2022 Conference Supplementary Material
+A paper describing the usage of PSDM on a Denso 6556W manipulator has been accepted for publication in the MECC 2022 conference. Supplementary material for this publication is provided in the directory ``supplementary_material_MECC2022``.
+
 ## Contact
 Author: Steffan Lloyd (Steffan.Lloyd@carleton.ca).
